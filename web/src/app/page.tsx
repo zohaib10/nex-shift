@@ -5,8 +5,22 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
+import { useRouter } from "next/navigation";
+import { 
+  Building2, 
+  User, 
+  Calendar, 
+  Repeat, 
+  Bell, 
+  BarChart3, 
+  ArrowRight, 
+  Play, 
+  Check 
+} from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
+
   React.useEffect(() => {
     const obs = new IntersectionObserver(
       (entries) => {
@@ -34,8 +48,8 @@ export default function Home() {
         </ul>
         <div className="flex gap-2 sm:gap-[9px] items-center">
           <ThemeToggle />
-          <Button variant="ghost" className="hidden sm:inline-flex">Log in</Button>
-          <Button>Get started free</Button>
+          <Button variant="ghost" className="hidden sm:inline-flex" onClick={() => router.push('/login')}>Log in</Button>
+          <Button onClick={() => router.push('/signup')}>Get started free</Button>
         </div>
       </nav>
 
@@ -57,8 +71,8 @@ export default function Home() {
         </Text>
         
         <div className="mt-8 md:mt-[34px] flex flex-col sm:flex-row gap-4 sm:gap-[11px] items-center justify-center animate-up [animation-delay:210ms] relative z-10">
-          <Button size="lg" className="w-full sm:w-auto">Start for free →</Button>
-          <Button variant="link">Watch a demo ▶</Button>
+          <Button size="lg" className="w-full sm:w-auto" onClick={() => router.push('/signup')}>Start for free <ArrowRight className="w-[17px] h-[17px] ml-[2px]" /></Button>
+          <Button variant="link"><Play className="w-[14px] h-[14px] fill-current mr-[1px]" /> Watch a demo</Button>
         </div>
         
         <div className="mt-12 md:mt-[54px] flex flex-col items-center gap-[13px] animate-up [animation-delay:280ms] relative z-10">
@@ -94,12 +108,12 @@ export default function Home() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[1px] bg-brd border border-brd rounded-[15px] overflow-hidden mt-10 md:mt-[52px] transition-all duration-300">
           {[
-            { icon: "🏥", title: "Multi-Facility Management", desc: "Define facilities, switch contexts instantly, and manage staff across locations from one dashboard." },
-            { icon: "👤", title: "Roles & Staff Types", desc: "Create custom staff types — physicians, nurses, X-ray techs, front desk — with tailored permissions." },
-            { icon: "📅", title: "Intelligent Scheduling", desc: "Build and publish schedules per role and facility. Automated conflict detection keeps things clean." },
-            { icon: "🔁", title: "Shift Swaps & Requests", desc: "Staff request swaps and time off — flowing through clean admin approval workflows." },
-            { icon: "🔔", title: "Real-Time Notifications", desc: "Push, email, and in-app alerts keep everyone in sync the moment a schedule changes." },
-            { icon: "📊", title: "Analytics & Insights", desc: "Utilization, fairness, coverage gaps — understand your workforce before issues surface." },
+            { icon: <Building2 className="w-[18px] h-[18px] text-acc" />, title: "Multi-Facility Management", desc: "Define facilities, switch contexts instantly, and manage staff across locations from one dashboard." },
+            { icon: <User className="w-[18px] h-[18px] text-acc" />, title: "Roles & Staff Types", desc: "Create custom staff types — physicians, nurses, X-ray techs, front desk — with tailored permissions." },
+            { icon: <Calendar className="w-[18px] h-[18px] text-acc" />, title: "Intelligent Scheduling", desc: "Build and publish schedules per role and facility. Automated conflict detection keeps things clean." },
+            { icon: <Repeat className="w-[18px] h-[18px] text-acc" />, title: "Shift Swaps & Requests", desc: "Staff request swaps and time off — flowing through clean admin approval workflows." },
+            { icon: <Bell className="w-[18px] h-[18px] text-acc" />, title: "Real-Time Notifications", desc: "Push, email, and in-app alerts keep everyone in sync the moment a schedule changes." },
+            { icon: <BarChart3 className="w-[18px] h-[18px] text-acc" />, title: "Analytics & Insights", desc: "Utilization, fairness, coverage gaps — understand your workforce before issues surface." },
           ].map((feature, i) => (
             <div key={i} className="group bg-surf p-6 md:p-[34px_30px] relative overflow-hidden transition-colors duration-[220ms] hover:bg-surf2 cursor-default">
               <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-acc to-blu scale-x-0 origin-left transition-transform duration-[330ms] ease-out group-hover:scale-x-100" />
@@ -181,7 +195,7 @@ export default function Home() {
         <Heading variant="section">Two roles. Total clarity.</Heading>
         <Text variant="section">Admins configure and control. Staff view and act. Simple, secure, purpose-built for healthcare teams.</Text>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-[18px] mt-10 md:mt-[52px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-[18px] mt-10 md:mt-[52px]">
           <div className="bg-surf border border-brd rounded-[15px] p-6 md:p-[34px] transition-all duration-[220ms] hover:border-brd2 hover:text-tx hover:-translate-y-[3px]">
             <span className="inline-block text-[0.64rem] font-bold tracking-[0.08em] uppercase py-[3px] px-[11px] rounded-[6px] mb-4 bg-blu-bg text-blu border border-[rgba(37,99,235,0.18)] dark:border-[rgba(59,130,246,0.22)]">Admin</span>
             <div className="font-geist text-[1.65rem] font-[800] tracking-[-0.045em] mb-[9px] text-tx transition-colors duration-300">Admins</div>
@@ -189,7 +203,9 @@ export default function Home() {
             <div className="flex flex-col gap-[8px]">
               {["Create & manage facilities", "Define custom staff roles & types", "Invite and manage all users", "Build, edit & publish schedules", "Approve shift swaps & requests", "View analytics & reports"].map((p, i) => (
                 <div key={i} className="flex items-center gap-[9px] text-[0.81rem] text-tx2 font-normal transition-colors duration-300">
-                  <div className="w-[16px] h-[16px] rounded-[4px] shrink-0 flex items-center justify-center text-[0.58rem] bg-blu-bg text-blu border border-[rgba(37,99,235,0.18)] dark:border-[rgba(59,130,246,0.22)] transition-colors duration-300">✓</div>
+                  <div className="w-[16px] h-[16px] rounded-[4px] shrink-0 flex items-center justify-center bg-blu-bg text-blu border border-[rgba(37,99,235,0.18)] dark:border-[rgba(59,130,246,0.22)] transition-colors duration-300">
+                    <Check className="w-[10px] h-[10px]" strokeWidth={3} />
+                  </div>
                   {p}
                 </div>
               ))}
@@ -203,7 +219,9 @@ export default function Home() {
             <div className="flex flex-col gap-[8px]">
               {["View personal schedule", "Request time off or shift swaps", "Receive real-time notifications", "View facility & team roster", "Submit availability preferences", "Access via web or mobile app"].map((p, i) => (
                 <div key={i} className="flex items-center gap-[9px] text-[0.81rem] text-tx2 font-normal transition-colors duration-300">
-                  <div className="w-[16px] h-[16px] rounded-[4px] shrink-0 flex items-center justify-center text-[0.58rem] bg-acc-bg text-acc border border-acc-brd transition-colors duration-300">✓</div>
+                  <div className="w-[16px] h-[16px] rounded-[4px] shrink-0 flex items-center justify-center bg-acc-bg text-acc border border-acc-brd transition-colors duration-300">
+                    <Check className="w-[10px] h-[10px]" strokeWidth={3} />
+                  </div>
                   {p}
                 </div>
               ))}
@@ -219,7 +237,7 @@ export default function Home() {
         
         <div className="flex flex-col sm:flex-row max-w-[400px] mx-auto bg-surf border border-brd2 rounded-[10px] overflow-hidden transition-colors duration-300 relative z-10 font-plus text-[0.86rem] focus-within:border-tx3 p-1 sm:p-0">
           <input type="email" placeholder="Enter your work email" className="flex-1 bg-transparent border-none outline-none py-3 px-4 text-tx transition-colors duration-300 placeholder:text-tx3" />
-          <Button className="!rounded-[7px] sm:!rounded-l-none sm:!rounded-r-[9px] !h-[42px] sm:!h-auto !px-[18px]">Start free →</Button>
+          <Button onClick={() => router.push('/signup')} className="!rounded-[7px] sm:!rounded-l-none sm:!rounded-r-[9px] !h-[42px] sm:!h-auto !px-[18px]">Start free <ArrowRight className="w-[16px] h-[16px] ml-1" /></Button>
         </div>
         <p className="text-[0.73rem] text-tx3 mt-4 transition-colors duration-300 relative z-10">No credit card required · Free 30-day trial</p>
       </div>
