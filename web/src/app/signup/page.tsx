@@ -69,13 +69,8 @@ export default function Signup() {
         </div>
       </nav>
 
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute rounded-full blur-[120px] w-[400px] h-[400px] md:w-[700px] md:h-[500px] bg-acc-bg top-0 left-1/2 -translate-x-1/2 animate-[var(--animate-od1)]" />
-        <div className="absolute rounded-full blur-[120px] w-[350px] h-[350px] md:w-[400px] md:h-[400px] bg-blu-bg bottom-[-100px] right-[-80px] animate-[var(--animate-od2)]" />
-      </div>
-
       <div className="flex-1 flex flex-col justify-start items-center p-6 md:p-[40px_24px_60px] pt-[84px] md:pt-[100px] relative z-10 w-full min-h-[100svh]">
-        <div className="w-full max-w-[460px] my-auto bg-surf border border-brd rounded-[18px] p-6 sm:p-[40px] relative z-20 shadow-sm transition-all duration-300 animate-up">
+        <div className="w-full max-w-[400px] my-auto relative z-20 animate-up">
           <div className="flex items-center gap-[8px] mb-[28px]">
             <div className="w-[36px] h-[36px] bg-acc rounded-[9px] flex items-center justify-center text-[0.8rem] font-[700] text-[#07090E]">R·</div>
             <span className="font-geist text-[1.1rem] font-[600] tracking-[-0.03em] text-tx">Rosta<span className="text-acc">·</span></span>
@@ -96,7 +91,7 @@ export default function Signup() {
                       placeholder="Jane" 
                       value={form.fname}
                       onChange={e => { setForm({...form, fname: e.target.value}); setErrors({...errors, fname: false}); }}
-                      className={`w-full bg-bg2 border ${errors.fname ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[13px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
+                      className={`w-full bg-bg border ${errors.fname ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[13px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
                     />
                   </div>
                   {errors.fname && <div className="text-[0.72rem] text-red-500 mt-[5px]">Please enter your first name</div>}
@@ -110,7 +105,7 @@ export default function Signup() {
                       placeholder="Smith" 
                       value={form.lname}
                       onChange={e => { setForm({...form, lname: e.target.value}); setErrors({...errors, lname: false}); }}
-                      className={`w-full bg-bg2 border ${errors.lname ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[13px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
+                      className={`w-full bg-bg border ${errors.lname ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[13px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
                     />
                   </div>
                   {errors.lname && <div className="text-[0.72rem] text-red-500 mt-[5px]">Please enter your last name</div>}
@@ -126,7 +121,7 @@ export default function Signup() {
                     placeholder="jane@clinic.com" 
                     value={form.email}
                     onChange={e => { setForm({...form, email: e.target.value}); setErrors({...errors, email: false}); }}
-                    className={`w-full bg-bg2 border ${errors.email ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[13px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
+                    className={`w-full bg-bg border ${errors.email ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[13px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
                   />
                 </div>
                 {errors.email && <div className="text-[0.72rem] text-red-500 mt-[5px]">Please enter a valid email</div>}
@@ -141,7 +136,7 @@ export default function Signup() {
                     placeholder="+1 (555) 000-0000" 
                     value={form.phone}
                     onChange={e => { setForm({...form, phone: e.target.value}); setErrors({...errors, phone: false}); }}
-                    className={`w-full bg-bg2 border ${errors.phone ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[13px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
+                    className={`w-full bg-bg border ${errors.phone ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[13px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
                   />
                 </div>
                 {errors.phone && <div className="text-[0.72rem] text-red-500 mt-[5px]">Please enter a valid phone number</div>}
@@ -156,7 +151,7 @@ export default function Signup() {
                     placeholder="Min. 8 characters" 
                     value={password}
                     onChange={e => { setPassword(e.target.value); setErrors({...errors, pass: false}); }}
-                    className={`w-full bg-bg2 border ${errors.pass ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[40px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
+                    className={`w-full bg-bg border ${errors.pass ? 'border-red-500 bg-red-500/10 focus:border-red-500' : 'border-brd2 focus:border-acc'} rounded-[10px] py-[11px] pr-[40px] pl-[38px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd`}
                   />
                   <button 
                     type="button" 
