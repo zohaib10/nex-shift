@@ -45,21 +45,25 @@ export interface OnboardingComponentProps {
 const STEPS = [
   {
     icon: <Building className="w-[20px] h-[20px] text-acc" />,
+    label: "Organization",
     title: "Your Organization",
     subtitle: "Tell us about your practice.",
   },
   {
     icon: <MapPin className="w-[20px] h-[20px] text-acc" />,
+    label: "Location",
     title: "First Location",
     subtitle: "Where is your primary facility?",
   },
   {
     icon: <Users className="w-[20px] h-[20px] text-acc" />,
+    label: "Invite team",
     title: "Invite Your Team",
     subtitle: "Add team members to get started.",
   },
   {
     icon: <CheckSquare className="w-[20px] h-[20px] text-acc" />,
+    label: "Launch",
     title: "Review & Launch",
     subtitle: "Confirm your setup and go live.",
   },
@@ -116,28 +120,44 @@ export function OnboardingComponent({
 
         {/* Step progress indicator */}
         {!isSuccess && (
-          <div className="flex items-center justify-center mb-[36px] mt-[8px] relative z-10">
-            {STEPS.map((_, i) => (
-              <React.Fragment key={i}>
-                <div
-                  className={`w-[11px] h-[11px] rounded-full transition-all duration-300 ${
-                    currentStep > i + 1
-                      ? "bg-acc"
-                      : currentStep === i + 1
-                      ? "bg-acc ring-[3px] ring-acc-brd"
-                      : "bg-brd2"
-                  }`}
-                />
-                {i < 3 && (
-                  <div className="relative w-[52px] h-[2px] bg-brd2 mx-[3px]">
+          <div className="flex items-center justify-center mb-[40px] mt-[8px] relative z-20">
+            <div className="flex items-center">
+              {STEPS.map((step, i) => (
+                <React.Fragment key={i}>
+                  {/* Step item */}
+                  <div className="flex flex-col items-center gap-[8px] relative">
                     <div
-                      className="absolute left-0 top-0 h-full bg-acc transition-all duration-500 ease-in-out rounded-full"
-                      style={{ width: currentStep > i + 1 ? "100%" : "0%" }}
-                    />
+                      className={`w-[28px] h-[28px] rounded-full flex items-center justify-center text-[0.7rem] font-bold border-2 transition-all duration-300 ${
+                        currentStep > i + 1
+                          ? "bg-acc/10 border-acc text-acc"
+                          : currentStep === i + 1
+                          ? "bg-acc border-acc text-[#07090E] shadow-[0_0_0_4px_rgba(0,212,138,0.15)]"
+                          : "bg-surface border-brd2 text-tx3"
+                      }`}
+                    >
+                      {i + 1}
+                    </div>
+                    <span 
+                      className={`text-[0.62rem] font-semibold tracking-wider uppercase whitespace-nowrap absolute top-[36px] transition-colors duration-300 ${
+                        currentStep === i + 1 ? "text-acc" : "text-tx3"
+                      }`}
+                    >
+                      {step.label}
+                    </span>
                   </div>
-                )}
-              </React.Fragment>
-            ))}
+
+                  {/* Divider line */}
+                  {i < 3 && (
+                    <div className="w-[48px] h-[2px] bg-brd2 mx-[8px] mb-[20px] relative overflow-hidden">
+                      <div
+                        className="absolute left-0 top-0 h-full bg-acc transition-all duration-500 ease-in-out"
+                        style={{ width: currentStep > i + 1 ? "100%" : "0%" }}
+                      />
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         )}
 
