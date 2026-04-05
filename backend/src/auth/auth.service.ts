@@ -221,4 +221,42 @@ export class AuthService {
 
     return { success: true };
   }
+
+  async googleSync(dto: import('./dto/google-sync.dto').GoogleSyncDto) {
+    let user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { supabaseId: dto.supabaseId },
+          { email: dto.email }
+        ]
+      }
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          supabaseId: dto.supabaseId,
+          email: dto.email,
+          firstName: dto.firstName || 'User',
+          lastName: dto.lastName || '',
+          phoneNumber: '',
+          phoneVerified: false,
+          emailVerified: true
+        }
+      });
+    } else if (!user.supabaseId) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { supabaseId: dto.supabaseId, emailVerified: true }
+      });
+    }
+
+    return {
+      id: user.id,
+      supabaseId: user.supabaseId,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+    };
+  }
 }

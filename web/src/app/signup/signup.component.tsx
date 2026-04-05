@@ -8,6 +8,7 @@ import Link from "next/link";
 import { PublicHeader } from "@/components/PublicHeader";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
+import { supabase } from "@/lib/supabase";
 import type { SignupPayload } from "@/hooks/auth/types";
 
 export interface SignupComponentProps {
@@ -18,6 +19,23 @@ export interface SignupComponentProps {
 
 export function SignupComponent({ onSubmit, isPending, apiError }: SignupComponentProps) {
   const [showPw, setShowPw] = React.useState(false);
+  const [googleError, setGoogleError] = React.useState<string | null>(null);
+
+  const handleGoogleSignup = async () => {
+    try {
+      setGoogleError(null);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('Google signup error:', error.message);
+      setGoogleError(error.message);
+    }
+  };
 
   const {
     register,
@@ -67,12 +85,14 @@ export function SignupComponent({ onSubmit, isPending, apiError }: SignupCompone
               <Heading as="h1" variant="card" className="!text-[1.5rem] !mb-[6px]">Create your account</Heading>
               <Text variant="default" className="!mb-[28px] !font-light">Get your team scheduled in minutes.</Text>
 
-              <div className={`overflow-hidden transition-all duration-300 ${apiError ? 'max-h-[100px] mb-[16px] opacity-100' : 'max-h-0 mb-0 opacity-0'}`}>
+              <div className={`overflow-hidden transition-all duration-300 ${apiError || googleError ? 'max-h-[100px] mb-[16px] opacity-100' : 'max-h-0 mb-0 opacity-0'}`}>
                 <div className="flex items-center gap-[8px] p-[11px_14px] bg-red-500/10 border border-red-500/25 rounded-[10px] text-red-500 text-[0.82rem]">
                   <AlertTriangle className="w-[16px] h-[16px] shrink-0" />
-                  <span>{apiError}</span>
+                  <span>{apiError || googleError}</span>
                 </div>
               </div>
+
+
 
               {/* Name row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-[12px] mb-[16px]">
@@ -183,7 +203,11 @@ export function SignupComponent({ onSubmit, isPending, apiError }: SignupCompone
               </div>
 
               {/* Google OAuth */}
-              <button type="button" className="w-full py-[10px] rounded-[10px] border border-brd2 bg-transparent text-tx text-[0.85rem] font-medium flex items-center justify-center gap-[9px] transition-all duration-200 hover:bg-surf2 hover:border-tx3 mb-[20px]">
+              <button 
+                type="button" 
+                onClick={handleGoogleSignup}
+                className="w-full py-[10px] rounded-[10px] border border-brd2 bg-transparent text-tx text-[0.85rem] font-medium flex items-center justify-center gap-[9px] transition-all duration-200 hover:bg-surf2 hover:border-tx3 mb-[20px]"
+              >
                 <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronLeft, CheckCircle } from "lucide-react";
+import { ChevronLeft, CheckCircle, Building, MapPin, Users, CheckSquare } from "lucide-react";
 import { DashboardHeader } from "@/features/Dashboard/components/Header";
 import { OrgDetailsStep, OrgDetailsValues, OrgDetailsErrors } from "./steps/OrgDetailsStep.component";
 import { LocationStep, LocationValues, LocationErrors } from "./steps/LocationStep.component";
@@ -44,22 +44,22 @@ export interface OnboardingComponentProps {
 
 const STEPS = [
   {
-    icon: "🏥",
+    icon: <Building className="w-[20px] h-[20px] text-acc" />,
     title: "Your Organization",
     subtitle: "Tell us about your practice.",
   },
   {
-    icon: "📍",
+    icon: <MapPin className="w-[20px] h-[20px] text-acc" />,
     title: "First Location",
     subtitle: "Where is your primary facility?",
   },
   {
-    icon: "👥",
+    icon: <Users className="w-[20px] h-[20px] text-acc" />,
     title: "Invite Your Team",
     subtitle: "Add team members to get started.",
   },
   {
-    icon: "✅",
+    icon: <CheckSquare className="w-[20px] h-[20px] text-acc" />,
     title: "Review & Launch",
     subtitle: "Confirm your setup and go live.",
   },

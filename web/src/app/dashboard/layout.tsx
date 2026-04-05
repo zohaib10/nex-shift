@@ -30,27 +30,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     // Profile page is always accessible — it's where logout lives
-  if (pathname === "/dashboard/profile") {
+    if (pathname === "/dashboard/profile") {
+      setUser(session);
+      setIsLoading(false);
+      return;
+    }
+
+    // Assign the user immediately and stop loading without blocking access
     setUser(session);
     setIsLoading(false);
-    return;
-  }
-
-  api
-      .get(`/organizations/has-membership/${session.id}`)
-      .then((response) => {
-        if (!response.data.hasMembership) {
-          router.replace("/onboarding");
-        } else {
-          setUser(session);
-          setIsLoading(false);
-        }
-      })
-      .catch(() => {
-        // On API failure, fall through to dashboard rather than blocking the user
-        setUser(session);
-        setIsLoading(false);
-      });
   }, [router, pathname]);
 
   if (isLoading) {

@@ -3,6 +3,7 @@ import { Geist, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { QueryProvider } from "@/components/QueryProvider";
+import { GlobalAuthListener } from "@/components/GlobalAuthListener";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-plus bg-bg text-tx transition-colors duration-300">
         <ThemeProvider>
           <QueryProvider>
+            <GlobalAuthListener />
             {children}
           </QueryProvider>
         </ThemeProvider>
