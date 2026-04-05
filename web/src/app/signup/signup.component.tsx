@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { User, Mail, Phone, Lock, Eye, EyeOff, CheckCircle, ArrowRight, Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { NexShiftLogo } from "@/components/NexShiftLogo";
+import { PublicHeader } from "@/components/PublicHeader";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 import type { SignupPayload } from "@/hooks/auth/types";
@@ -49,20 +49,17 @@ export function SignupComponent({ onSubmit, isPending, apiError }: SignupCompone
 
   return (
     <main className="min-h-[100svh] flex flex-col relative bg-bg text-tx transition-colors duration-300">
-      <nav className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-6 md:px-[40px] h-[58px] bg-nav backdrop-blur-[18px] saturate-[140%] border-b border-brd transition-all duration-300">
-        <Link href="/" className="flex items-center no-underline shrink-0">
-          <NexShiftLogo size="sm" />
-        </Link>
-        <div className="flex gap-[8px] items-center">
-          <ThemeToggle />
-          <Link href="/login" className="text-tx2 no-underline text-[0.84rem] font-medium transition-colors duration-150 hover:text-tx hidden sm:block mr-2">
-            Already have an account?
-          </Link>
-          <Link href="/login" className="px-[16px] py-[6px] rounded-[10px] border border-brd2 bg-transparent text-tx text-[0.84rem] font-medium transition-colors duration-200 hover:bg-surf2 focus:outline-none flex items-center justify-center">
-            Log in
-          </Link>
-        </div>
-      </nav>
+      <PublicHeader 
+        variant="auth" 
+        authAction={
+          <div className="flex items-center gap-[10px] sm:gap-[16px]">
+            <span className="text-tx2 text-[0.84rem] hidden sm:inline">Already have an account?</span>
+            <Link href="/login" className="px-[16px] py-[6px] rounded-[10px] border border-brd2 bg-transparent text-tx text-[0.84rem] font-medium transition-colors duration-200 hover:bg-surf2 focus:outline-none flex items-center justify-center">
+              Log in
+            </Link>
+          </div>
+        }
+      />
 
       <div className="flex-1 flex flex-col justify-start items-center p-6 md:p-[40px_24px_60px] pt-[84px] md:pt-[100px] relative z-10 w-full min-h-[100svh]">
         <div className="w-full max-w-[400px] my-auto relative z-20 animate-up">

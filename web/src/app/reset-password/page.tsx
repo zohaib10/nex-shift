@@ -8,6 +8,7 @@ import { NexShiftLogo } from "@/components/NexShiftLogo";
 import { useResetPassword } from "@/hooks/auth/useResetPassword";
 import { Lock, Eye, EyeOff, Loader2, ArrowRight, CheckCircle, AlertTriangle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { PublicHeader } from "@/components/PublicHeader";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 
@@ -78,12 +79,7 @@ function ResetPasswordContent() {
   if (!token) {
     return (
       <main className="min-h-[100svh] flex items-center justify-center p-[80px_24px_48px] bg-bg text-tx transition-colors duration-300">
-        <nav className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-6 md:px-[40px] h-[58px] bg-nav backdrop-blur-[18px] saturate-[140%] border-b border-brd transition-all duration-300">
-          <Link href="/" className="flex items-center no-underline shrink-0">
-            <NexShiftLogo size="sm" />
-          </Link>
-          <ThemeToggle />
-        </nav>
+        <PublicHeader variant="auth" />
         <div className="text-center animate-up">
           <AlertTriangle className="w-[48px] h-[48px] text-red-500 mx-auto mb-[16px]" />
           <Heading as="h1" variant="card" className="!text-[1.5rem] !mb-[8px]">Invalid reset link</Heading>
@@ -103,17 +99,14 @@ function ResetPasswordContent() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-acc-bg rounded-[50%] blur-[50px] pointer-events-none animate-[breathe_10s_ease-in-out_infinite]" />
       <div className="absolute bottom-[-80px] right-[-80px] w-[400px] h-[400px] bg-blu-bg rounded-[50%] blur-[60px] pointer-events-none" />
 
-      <nav className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-6 md:px-[40px] h-[58px] bg-nav backdrop-blur-[18px] saturate-[140%] border-b border-brd transition-all duration-300">
-        <Link href="/" className="flex items-center no-underline shrink-0">
-          <NexShiftLogo size="sm" />
-        </Link>
-        <div className="flex gap-[10px] items-center">
-          <ThemeToggle />
-          <Link href="/login" className="px-[16px] py-[6px] rounded-[10px] border border-brd2 bg-transparent text-tx text-[0.84rem] font-medium transition-colors duration-200 hover:bg-surf2">
+      <PublicHeader 
+        variant="auth" 
+        authAction={
+          <Link href="/login" className="px-[16px] py-[6px] rounded-[10px] border border-brd2 bg-transparent text-tx text-[0.84rem] font-medium transition-colors duration-200 hover:bg-surf2 focus:outline-none flex items-center justify-center">
             ← Back to login
           </Link>
-        </div>
-      </nav>
+        }
+      />
 
       <div className="bg-card border border-brd rounded-[18px] p-[40px] w-full max-w-[420px] relative z-[2] transition-colors duration-300 animate-up shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
 

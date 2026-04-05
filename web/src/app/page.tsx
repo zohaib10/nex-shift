@@ -20,6 +20,8 @@ import {
   Check 
 } from "lucide-react";
 
+import { PublicHeader } from "@/components/PublicHeader";
+
 export default function Home() {
   const router = useRouter();
 
@@ -38,39 +40,7 @@ export default function Home() {
 
   return (
     <main>
-      <nav className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-between px-6 md:px-[52px] h-[72px] bg-bg/80 backdrop-blur-[24px] saturate-[180%] border-b border-brd/50 transition-all duration-300">
-        <Link href="/" className="flex items-center no-underline shrink-0 group">
-          <div className="transition-transform duration-300 group-hover:scale-[1.02]">
-            <NexShiftLogo size="md" />
-          </div>
-        </Link>
-        
-        {/* Sleek Pill Navigation */}
-        <ul className="absolute left-1/2 -translate-x-1/2 hidden lg:flex items-center gap-[2px] list-none bg-surf/60 backdrop-blur-md border border-brd2 rounded-full p-[4px] shadow-sm">
-          <li><a href="#" className="block px-[18px] py-[6px] rounded-full text-tx2 no-underline text-[0.84rem] font-[500] tracking-[-0.01em] transition-all duration-200 hover:text-tx hover:bg-surf2">Features</a></li>
-          <li><a href="#" className="block px-[18px] py-[6px] rounded-full text-tx2 no-underline text-[0.84rem] font-[500] tracking-[-0.01em] transition-all duration-200 hover:text-tx hover:bg-surf2">How It Works</a></li>
-          <li><a href="#" className="block px-[18px] py-[6px] rounded-full text-tx2 no-underline text-[0.84rem] font-[500] tracking-[-0.01em] transition-all duration-200 hover:text-tx hover:bg-surf2">Pricing</a></li>
-          <li><a href="#" className="block px-[18px] py-[6px] rounded-full text-tx2 no-underline text-[0.84rem] font-[500] tracking-[-0.01em] transition-all duration-200 hover:text-tx hover:bg-surf2">Docs</a></li>
-        </ul>
-
-        {/* Right Actions */}
-        <div className="flex gap-[16px] sm:gap-[20px] items-center">
-          <ThemeToggle />
-          <div className="h-[20px] w-[1px] bg-brd2 hidden sm:block" />
-          <button 
-            onClick={() => router.push('/login')}
-            className="hidden sm:flex text-[0.86rem] font-[500] text-tx2 hover:text-tx transition-colors duration-200"
-          >
-            Log in
-          </button>
-          <button 
-            onClick={() => router.push('/signup')}
-            className="h-[38px] px-[20px] text-[0.86rem] font-[600] text-[#07090E] bg-acc rounded-full tracking-tight transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_4px_14px_rgba(0,212,138,0.25)] focus:scale-[0.98] focus:outline-none"
-          >
-            Get started
-          </button>
-        </div>
-      </nav>
+      <PublicHeader variant="marketing" />
 
       <section className="min-h-[100svh] flex flex-col items-center justify-center px-6 md:px-[52px] pt-28 md:pt-[100px] pb-16 md:pb-[64px] text-center relative overflow-hidden">
         <div className="absolute rounded-full blur-[120px] pointer-events-none w-[400px] h-[400px] md:w-[660px] md:h-[500px] bg-acc-bg top-[-60px] left-[-160px] animate-[var(--animate-od1)]" />
