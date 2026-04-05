@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(uuid())
+  supabaseId     String    @unique
+  firstName      String
+  lastName       String
+  email          String    @unique
+  phoneNumber    String
+  emailVerified  Boolean   @default(false)
+  phoneVerified  Boolean   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  resetTokens    PasswordResetToken[]
+
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
+}
+
+model Organization {
+  id           String   @id @default(uuid())
+  name         String
+  type         String
+  typeOther    String?  @map("type_other")
+  phone        String?
+  website      String?
+  ownerId      String   @map("owner_id")
+  plan         String   @default("free")
+  planStatus   String   @default("active") @map("plan_status")
+  maxMembers   Int      @default(5) @map("max_members")
+  maxLocations Int      @default(1) @map("max_locations")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  locations Location[]
+  members   OrgMember[]
+
+  @@map("organizations")
+}
+
+model Location {
+  id        String       @id @default(uuid())
+  orgId     String       @map("org_id")
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  city      String?
+  state     String?
+  timezone  String?
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@map("locations")
+}
+
+model OrgMember {
+  id        String       @id @default(uuid())
+  orgId     String       @map("org_id")
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId    String       @map("user_id")
+  role      String       @default("user")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@unique([orgId, userId])
+  @@map("org_members")
+}
+
+model PromoCode {
+  id         String    @id @default(uuid())
+  code       String    @unique
+  maxMembers Int       @map("max_members")
+  maxUses    Int       @map("max_uses")
+  usesCount  Int       @default(0) @map("uses_count")
+  expiresAt  DateTime? @map("expires_at")
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("promo_codes")
+}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { QueryProvider } from "@/components/QueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Rosta — Healthcare Workforce, Reimagined",
-  description: "Rosta brings scheduling, workforce management, and staff coordination into one fluid platform.",
+  title: "NexShift — Healthcare Workforce, Reimagined",
+  description: "NexShift brings scheduling, workforce management, and staff coordination into one fluid platform.",
 };
 
 export default function RootLayout({
@@ -31,7 +32,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col font-plus bg-bg text-tx transition-colors duration-300">
         <ThemeProvider>
-          {children}
+          <QueryProvider>
+            {children}
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

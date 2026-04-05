@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NexShiftLogo } from "@/components/NexShiftLogo";
 import { Button } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { 
   Building2, 
   User, 
@@ -37,9 +39,9 @@ export default function Home() {
   return (
     <main>
       <nav className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-between px-6 md:px-[52px] h-[62px] bg-nav backdrop-blur-[22px] saturate-[160%] border-b border-brd transition-all duration-300">
-        <div className="font-geist font-[800] text-[1.3rem] tracking-[-0.04em] text-tx transition-colors duration-300">
-          Ro<span className="text-acc">.</span>sta
-        </div>
+        <Link href="/" className="flex items-center no-underline shrink-0">
+          <NexShiftLogo size="md" />
+        </Link>
         <ul className="absolute left-1/2 -translate-x-1/2 hidden md:flex gap-[30px] list-none">
           <li><a href="#" className="text-tx2 no-underline text-[0.86rem] font-medium tracking-[-0.01em] transition-colors duration-[180ms] hover:text-tx">Features</a></li>
           <li><a href="#" className="text-tx2 no-underline text-[0.86rem] font-medium tracking-[-0.01em] transition-colors duration-[180ms] hover:text-tx">How It Works</a></li>
@@ -67,7 +69,7 @@ export default function Home() {
         </Heading>
         
         <Text variant="hero" className="relative z-10">
-          Rosta brings scheduling, workforce management, and staff coordination into one fluid platform — for clinics and hospital systems alike.
+          NexShift brings scheduling, workforce management, and staff coordination into one fluid platform — for clinics and hospital systems alike.
         </Text>
         
         <div className="mt-8 md:mt-[34px] flex flex-col sm:flex-row gap-4 sm:gap-[11px] items-center justify-center animate-up [animation-delay:210ms] relative z-10">
@@ -233,7 +235,7 @@ export default function Home() {
       <div className="rev py-16 md:py-[96px] px-6 md:px-[52px] text-center relative overflow-hidden bg-bg border-t border-brd transition-colors duration-300">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_80%_at_50%_100%,var(--color-acc-bg),transparent)] pointer-events-none" />
         <Heading variant="cta" className="relative z-10">Your team deserves<br/>a better schedule.</Heading>
-        <Text variant="cta" className="relative z-10">Join healthcare teams that run cleaner, faster, and with less chaos using Rosta.</Text>
+        <Text variant="cta" className="relative z-10">Join healthcare teams that run cleaner, faster, and with less chaos using NexShift.</Text>
         
         <div className="flex flex-col sm:flex-row max-w-[400px] mx-auto bg-surf border border-brd2 rounded-[10px] overflow-hidden transition-colors duration-300 relative z-10 font-plus text-[0.86rem] focus-within:border-tx3 p-1 sm:p-0">
           <input type="email" placeholder="Enter your work email" className="flex-1 bg-transparent border-none outline-none py-3 px-4 text-tx transition-colors duration-300 placeholder:text-tx3" />
@@ -244,14 +246,14 @@ export default function Home() {
 
       <footer className="py-8 md:py-[30px] px-6 md:px-[52px] border-t border-brd flex flex-col md:flex-row items-center justify-between gap-6 md:gap-[14px] bg-bg transition-colors duration-300">
         <div className="font-geist font-[800] text-[1.3rem] tracking-[-0.04em] text-tx transition-colors duration-300">
-          Ro<span className="text-acc">.</span>sta
+          Nex<span className="text-acc">Shift</span>
         </div>
         <ul className="flex flex-wrap justify-center gap-4 md:gap-[22px] list-none">
           {["Product", "Pricing", "Docs", "Privacy", "Terms"].map((l) => (
             <li key={l}><a href="#" className="text-tx3 no-underline text-[0.79rem] transition-colors duration-[180ms] hover:text-tx2">{l}</a></li>
           ))}
         </ul>
-        <div className="text-[0.76rem] text-tx3 transition-colors duration-300">© 2026 Rosta. All rights reserved.</div>
+        <div className="text-[0.76rem] text-tx3 transition-colors duration-300">© 2026 NexShift. All rights reserved.</div>
       </footer>
     </main>
   );
