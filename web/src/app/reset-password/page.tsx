@@ -18,7 +18,7 @@ interface ResetFormData {
   confirmPassword: string;
 }
 
-export default function ResetPassword() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -231,5 +231,17 @@ export default function ResetPassword() {
 
       </div>
     </main>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <React.Suspense fallback={
+      <div className="min-h-[100svh] flex items-center justify-center bg-bg text-tx transition-colors duration-300">
+        <Loader2 className="w-8 h-8 animate-spin text-acc" />
+      </div>
+    }>
+      <ResetPasswordContent />
+    </React.Suspense>
   );
 }
