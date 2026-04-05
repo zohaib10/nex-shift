@@ -12,6 +12,8 @@ import { Heading } from "@/components/ui/Heading";
 import { Text } from "@/components/ui/Text";
 import { supabase } from "@/lib/supabase";
 
+import { GuestGuard } from "@/components/GuestGuard";
+
 type ViewState = 'login';
 
 interface LoginFormData {
@@ -24,7 +26,6 @@ export default function Login() {
   const [view, setView] = React.useState<ViewState>('login');
   const [showPw, setShowPw] = React.useState(false);
   const [remember, setRemember] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
   const [errBanner, setErrBanner] = React.useState(false);
 
   // Login form
@@ -78,20 +79,21 @@ export default function Login() {
   const inputErrorPw = `${inputBase} border-red-500 bg-red-500/10 focus:border-red-500 pr-[40px]`;
 
   return (
-    <main className="min-h-[100svh] flex flex-col pt-[58px] relative bg-bg text-tx transition-colors duration-300">
-      <PublicHeader 
-        variant="auth" 
-        authAction={
-          <div className="flex items-center gap-[10px] sm:gap-[16px]">
-            <span className="text-tx2 text-[0.84rem] hidden sm:inline">Don&apos;t have an account?</span>
-            <Link href="/signup" className="h-[36px] px-[16px] flex items-center rounded-full bg-acc text-[#07090E] font-geist font-[600] text-[0.84rem] tracking-[-0.01em] transition-all duration-150 hover:scale-[1.03] hover:shadow-[0_2px_8px_rgba(0,212,138,0.2)]">
-              Sign up free
-            </Link>
-          </div>
-        }
-      />
+    <GuestGuard>
+      <main className="min-h-[100svh] flex flex-col pt-[58px] relative bg-bg text-tx transition-colors duration-300">
+        <PublicHeader 
+          variant="auth" 
+          authAction={
+            <div className="flex items-center gap-[10px] sm:gap-[16px]">
+              <span className="text-tx2 text-[0.84rem] hidden sm:inline">Don&apos;t have an account?</span>
+              <Link href="/signup" className="h-[36px] px-[16px] flex items-center rounded-full bg-acc text-[#07090E] font-geist font-[600] text-[0.84rem] tracking-[-0.01em] transition-all duration-150 hover:scale-[1.03] hover:shadow-[0_2px_8px_rgba(0,212,138,0.2)]">
+                Sign up free
+              </Link>
+            </div>
+          }
+        />
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
         {/* LEFT PANEL */}
         <div className="hidden lg:flex flex-col justify-center px-[56px] py-[64px] bg-bg2 relative overflow-hidden border-r border-brd transition-colors duration-300 z-10">
           <div className="absolute rounded-full blur-[120px] pointer-events-none w-[500px] h-[500px] bg-acc-bg top-[-80px] left-[-80px] animate-[var(--animate-od1)]" />
@@ -263,5 +265,6 @@ export default function Login() {
         </div>
       </div>
     </main>
+  </GuestGuard>
   );
 }

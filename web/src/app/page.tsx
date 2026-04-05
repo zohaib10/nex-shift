@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { PublicHeader } from "@/components/PublicHeader";
+import { GuestGuard } from "@/components/GuestGuard";
 
 export default function Home() {
   const router = useRouter();
@@ -39,8 +40,9 @@ export default function Home() {
   }, []);
 
   return (
-    <main>
-      <PublicHeader variant="marketing" />
+    <GuestGuard>
+      <main>
+        <PublicHeader variant="marketing" />
 
       <section className="min-h-[100svh] flex flex-col items-center justify-center px-6 md:px-[52px] pt-28 md:pt-[100px] pb-16 md:pb-[64px] text-center relative overflow-hidden">
         <div className="absolute rounded-full blur-[120px] pointer-events-none w-[400px] h-[400px] md:w-[660px] md:h-[500px] bg-acc-bg top-[-60px] left-[-160px] animate-[var(--animate-od1)]" />
@@ -243,5 +245,6 @@ export default function Home() {
         <div className="text-[0.76rem] text-tx3 transition-colors duration-300">© 2026 NexShift. All rights reserved.</div>
       </footer>
     </main>
+  </GuestGuard>
   );
 }
