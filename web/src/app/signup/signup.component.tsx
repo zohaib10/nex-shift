@@ -66,10 +66,6 @@ export function SignupComponent({ onSubmit, isPending, apiError }: SignupCompone
 
       <div className="flex-1 flex flex-col justify-start items-center p-6 md:p-[40px_24px_60px] pt-[84px] md:pt-[100px] relative z-10 w-full min-h-[100svh]">
         <div className="w-full max-w-[400px] my-auto relative z-20 animate-up">
-          <div className="mb-[28px]">
-            <NexShiftLogo size="sm" />
-          </div>
-
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
               <Heading as="h1" variant="card" className="!text-[1.5rem] !mb-[6px]">Create your account</Heading>
               <Text variant="default" className="!mb-[28px] !font-light">Get your team scheduled in minutes.</Text>

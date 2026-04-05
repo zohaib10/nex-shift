@@ -38,20 +38,37 @@ export default function Home() {
 
   return (
     <main>
-      <nav className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-between px-6 md:px-[52px] h-[62px] bg-nav backdrop-blur-[22px] saturate-[160%] border-b border-brd transition-all duration-300">
-        <Link href="/" className="flex items-center no-underline shrink-0">
-          <NexShiftLogo size="md" />
+      <nav className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-between px-6 md:px-[52px] h-[72px] bg-bg/80 backdrop-blur-[24px] saturate-[180%] border-b border-brd/50 transition-all duration-300">
+        <Link href="/" className="flex items-center no-underline shrink-0 group">
+          <div className="transition-transform duration-300 group-hover:scale-[1.02]">
+            <NexShiftLogo size="md" />
+          </div>
         </Link>
-        <ul className="absolute left-1/2 -translate-x-1/2 hidden md:flex gap-[30px] list-none">
-          <li><a href="#" className="text-tx2 no-underline text-[0.86rem] font-medium tracking-[-0.01em] transition-colors duration-[180ms] hover:text-tx">Features</a></li>
-          <li><a href="#" className="text-tx2 no-underline text-[0.86rem] font-medium tracking-[-0.01em] transition-colors duration-[180ms] hover:text-tx">How It Works</a></li>
-          <li><a href="#" className="text-tx2 no-underline text-[0.86rem] font-medium tracking-[-0.01em] transition-colors duration-[180ms] hover:text-tx">Pricing</a></li>
-          <li><a href="#" className="text-tx2 no-underline text-[0.86rem] font-medium tracking-[-0.01em] transition-colors duration-[180ms] hover:text-tx">Docs</a></li>
+        
+        {/* Sleek Pill Navigation */}
+        <ul className="absolute left-1/2 -translate-x-1/2 hidden lg:flex items-center gap-[2px] list-none bg-surf/60 backdrop-blur-md border border-brd2 rounded-full p-[4px] shadow-sm">
+          <li><a href="#" className="block px-[18px] py-[6px] rounded-full text-tx2 no-underline text-[0.84rem] font-[500] tracking-[-0.01em] transition-all duration-200 hover:text-tx hover:bg-surf2">Features</a></li>
+          <li><a href="#" className="block px-[18px] py-[6px] rounded-full text-tx2 no-underline text-[0.84rem] font-[500] tracking-[-0.01em] transition-all duration-200 hover:text-tx hover:bg-surf2">How It Works</a></li>
+          <li><a href="#" className="block px-[18px] py-[6px] rounded-full text-tx2 no-underline text-[0.84rem] font-[500] tracking-[-0.01em] transition-all duration-200 hover:text-tx hover:bg-surf2">Pricing</a></li>
+          <li><a href="#" className="block px-[18px] py-[6px] rounded-full text-tx2 no-underline text-[0.84rem] font-[500] tracking-[-0.01em] transition-all duration-200 hover:text-tx hover:bg-surf2">Docs</a></li>
         </ul>
-        <div className="flex gap-2 sm:gap-[9px] items-center">
+
+        {/* Right Actions */}
+        <div className="flex gap-[16px] sm:gap-[20px] items-center">
           <ThemeToggle />
-          <Button variant="ghost" className="hidden sm:inline-flex" onClick={() => router.push('/login')}>Log in</Button>
-          <Button onClick={() => router.push('/signup')}>Get started free</Button>
+          <div className="h-[20px] w-[1px] bg-brd2 hidden sm:block" />
+          <button 
+            onClick={() => router.push('/login')}
+            className="hidden sm:flex text-[0.86rem] font-[500] text-tx2 hover:text-tx transition-colors duration-200"
+          >
+            Log in
+          </button>
+          <button 
+            onClick={() => router.push('/signup')}
+            className="h-[38px] px-[20px] text-[0.86rem] font-[600] text-[#07090E] bg-acc rounded-full tracking-tight transition-all duration-200 hover:scale-[1.03] hover:shadow-[0_4px_14px_rgba(0,212,138,0.25)] focus:scale-[0.98] focus:outline-none"
+          >
+            Get started
+          </button>
         </div>
       </nav>
 

@@ -140,9 +140,6 @@ export default function Login() {
           {/* LOGIN VIEW */}
           {view === 'login' && (
             <form onSubmit={handleLoginSubmit(onLoginSubmit)} noValidate className="w-full max-w-[400px] animate-up">
-              <div className="mb-[28px]">
-                <NexShiftLogo size="sm" />
-              </div>
               <Heading as="h1" variant="card" className="!text-[1.55rem] !mb-[5px]">Welcome back</Heading>
               <Text variant="default" className="!mb-[28px] !font-light">Log in to your NexShift account.</Text>
 
