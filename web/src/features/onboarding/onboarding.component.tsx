@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ChevronLeft, CheckCircle, Building, MapPin, Users, CheckSquare } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { DashboardHeader } from "@/features/Dashboard/components/Header";
 import { OrgDetailsStep, OrgDetailsValues, OrgDetailsErrors } from "./steps/OrgDetailsStep.component";
 import { LocationStep, LocationValues, LocationErrors } from "./steps/LocationStep.component";
@@ -29,6 +30,7 @@ export interface OnboardingComponentProps {
   submitError: string | null;
   orgNameCreated: string;
   user: { firstName: string; lastName: string } | null;
+  isAddMode: boolean;
   onFieldChange: (field: keyof OnboardingFormValues, value: string) => void;
   onAddEmail: (email: string) => void;
   onRemoveEmail: (email: string) => void;
@@ -83,6 +85,7 @@ export function OnboardingComponent({
   submitError,
   orgNameCreated,
   user,
+  isAddMode,
   onFieldChange,
   onAddEmail,
   onRemoveEmail,
@@ -95,6 +98,7 @@ export function OnboardingComponent({
   onSubmit,
   onGoToDashboard,
 }: OnboardingComponentProps) {
+  const router = useRouter();
   const isSuccess = currentStep === 5;
   const stepIndex = Math.min(currentStep - 1, 3);
   const stepInfo = STEPS[stepIndex];
@@ -107,6 +111,15 @@ export function OnboardingComponent({
   return (
     <main className="min-h-[100svh] flex flex-col relative bg-bg text-tx transition-colors duration-300">
       <DashboardHeader user={user} />
+      {isAddMode && (
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="absolute top-[70px] left-[28px] flex items-center gap-[5px] text-[0.8rem] text-tx2 hover:text-tx transition-colors duration-150 bg-transparent border-none cursor-pointer z-20"
+        >
+          <ChevronLeft className="w-[14px] h-[14px]" strokeWidth={2} />
+          Back to dashboard
+        </button>
+      )}
 
       {/* Page body */}
       <div className="flex-1 flex flex-col items-center pt-[80px] pb-[60px] px-[20px] relative z-10">
@@ -148,7 +161,7 @@ export function OnboardingComponent({
 
                   {/* Divider line */}
                   {i < 3 && (
-                    <div className="w-[48px] h-[2px] bg-brd2 mx-[8px] mb-[20px] relative overflow-hidden">
+                    <div className="w-[48px] h-[2px] bg-brd2 mx-[8px] relative overflow-hidden">
                       <div
                         className="absolute left-0 top-0 h-full bg-acc transition-all duration-500 ease-in-out"
                         style={{ width: currentStep > i + 1 ? "100%" : "0%" }}
@@ -204,9 +217,13 @@ export function OnboardingComponent({
                   {stepInfo.icon}
                 </div>
                 <h2 className="font-geist text-[1.35rem] font-[600] tracking-[-0.03em] text-tx mb-[4px]">
-                  {stepInfo.title}
+                  {currentStep === 1 && isAddMode ? "Add a new organization" : stepInfo.title}
                 </h2>
-                <p className="text-[0.84rem] text-tx2">{stepInfo.subtitle}</p>
+                <p className="text-[0.84rem] text-tx2">
+                  {currentStep === 1 && isAddMode
+                    ? "This will be a separate workspace. You can switch between your organizations from the sidebar."
+                    : stepInfo.subtitle}
+                </p>
               </div>
 
               {/* Step content */}

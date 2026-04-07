@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { DashboardHeader } from "@/features/Dashboard/components/Header";
 import { PageLoader } from "@/components/PageLoader";
+import { OrgProvider } from "@/context/OrgContext";
 import api from "@/lib/api";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -45,10 +46,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return <PageLoader />;
   }
 
+  // Main dashboard uses its own sidebar layout — no top header needed here
+  if (pathname === "/dashboard") {
+    return (
+      <OrgProvider>
+        <div className="bg-bg text-tx transition-colors duration-300">
+          {children}
+        </div>
+      </OrgProvider>
+    );
+  }
+
   return (
-    <div className="min-h-[100svh] bg-bg text-tx flex flex-col relative transition-colors duration-300">
-      <DashboardHeader user={user} />
-      {children}
-    </div>
+    <OrgProvider>
+      <div className="min-h-[100svh] bg-bg text-tx flex flex-col relative transition-colors duration-300">
+        <DashboardHeader user={user} />
+        {children}
+      </div>
+    </OrgProvider>
   );
 }

@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateOrgDto } from './dto/create-org.dto';
+import { AddLocationDto } from './dto/add-location.dto';
 
 const STATE_TIMEZONES: Record<string, { timezone: string; label: string }> = {
   AL: { timezone: 'America/Chicago', label: 'Central Time (CT)' },
@@ -184,8 +185,58 @@ export class OrganizationsService {
     return entry;
   }
 
+  async getUserOrgs(userId: string) {
+    const memberships = await this.prisma.orgMember.findMany({
+      where: { userId },
+      include: {
+        org: {
+          select: {
+            id: true,
+            name: true,
+            locations: { select: { id: true, name: true }, orderBy: { createdAt: 'asc' } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return memberships.map((m) => ({ ...m.org, role: m.role }));
+  }
+
+  async addLocation(orgId: string, dto: AddLocationDto) {
+    const org = await this.prisma.organization.findUnique({ where: { id: orgId } });
+    if (!org) throw new NotFoundException('Organization not found');
+
+    return this.prisma.location.create({
+      data: {
+        orgId,
+        name: dto.name,
+        address: dto.address,
+        city: dto.city,
+        state: dto.state,
+        timezone: dto.timezone,
+      },
+      select: { id: true, name: true },
+    });
+  }
+
   async hasMembership(userId: string) {
-    const count = await this.prisma.orgMember.count({ where: { userId } });
-    return { hasMembership: count > 0 };
+    const membership = await this.prisma.orgMember.findFirst({
+      where: { userId },
+      include: {
+        org: {
+          select: {
+            id: true,
+            name: true,
+            locations: { select: { id: true, name: true }, orderBy: { createdAt: 'asc' } },
+          },
+        },
+      },
+    });
+    return {
+      hasMembership: !!membership,
+      organization: membership
+        ? { id: membership.org.id, name: membership.org.name, locations: membership.org.locations }
+        : null,
+    };
   }
 }

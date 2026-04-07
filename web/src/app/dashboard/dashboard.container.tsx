@@ -3,30 +3,29 @@
 import React, { useEffect, useState } from "react";
 import { DashboardComponent, EmptyOrgComponent } from "./dashboard.component";
 import { PageLoader } from "@/components/PageLoader";
-import api from "@/lib/api";
+import { useOrg } from "@/context/OrgContext";
 
 export function DashboardContainer() {
-  const [hasOrg, setHasOrg] = useState<boolean | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+  const { activeOrg, isLoading: orgsLoading, addLocationToOrg } = useOrg();
 
   useEffect(() => {
-    try {
-      const sessionStr = localStorage.getItem("rosta_session");
-      if (sessionStr) {
-        const session = JSON.parse(sessionStr);
-        api.get(`/organizations/has-membership/${session.id}`)
-          .then(res => setHasOrg(res.data.hasMembership))
-          .catch(() => setHasOrg(true)); // Fallback allowing access on error
-      }
-    } catch {
-      setHasOrg(true);
-    }
+    const raw = localStorage.getItem("rosta_session");
+    if (raw) setUser(JSON.parse(raw));
+    setUserLoaded(true);
   }, []);
 
-  if (hasOrg === null) return <PageLoader />;
+  if (!userLoaded || orgsLoading) return <PageLoader />;
 
-  if (!hasOrg) {
-    return <EmptyOrgComponent />;
+  if (!activeOrg) {
+    return <EmptyOrgComponent user={user} />;
   }
 
-  return <DashboardComponent />;
+  return (
+    <DashboardComponent
+      user={user}
+      onLocationAdded={(loc) => addLocationToOrg(activeOrg.id, loc)}
+    />
+  );
 }

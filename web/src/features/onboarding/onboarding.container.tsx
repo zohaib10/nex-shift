@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { OnboardingComponent, OnboardingFormValues } from "./onboarding.component";
 import { useCreateOrg } from "./hooks/useCreateOrg.hook";
 import { useValidatePromo } from "./hooks/useValidatePromo.hook";
@@ -28,6 +28,9 @@ const INITIAL_FORM: OnboardingFormValues = {
 
 export function OnboardingContainer() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isAddMode = searchParams.get("mode") === "add";
+
   const [currentStep, setCurrentStep] = useState(1);
   const [slideDirection, setSlideDirection] = useState<"forward" | "backward">("forward");
   const [formValues, setFormValues] = useState<OnboardingFormValues>(INITIAL_FORM);
@@ -68,17 +71,11 @@ export function OnboardingContainer() {
   };
 
   const handleAddEmail = (email: string) => {
-    setFormValues((prev) => ({
-      ...prev,
-      inviteEmails: [...prev.inviteEmails, email],
-    }));
+    setFormValues((prev) => ({ ...prev, inviteEmails: [...prev.inviteEmails, email] }));
   };
 
   const handleRemoveEmail = (email: string) => {
-    setFormValues((prev) => ({
-      ...prev,
-      inviteEmails: prev.inviteEmails.filter((e) => e !== email),
-    }));
+    setFormValues((prev) => ({ ...prev, inviteEmails: prev.inviteEmails.filter((e) => e !== email) }));
   };
 
   const handlePromoInputChange = (val: string) => {
@@ -116,30 +113,21 @@ export function OnboardingContainer() {
 
   const handleRemovePromo = () => {
     setPromoApplied(null);
-    setFormValues((prev) => ({
-      ...prev,
-      promoId: null,
-      promoMaxMembers: null,
-      promoCode: null,
-      promoInput: "",
-    }));
+    setFormValues((prev) => ({ ...prev, promoId: null, promoMaxMembers: null, promoCode: null, promoInput: "" }));
   };
 
   const validateStep = (): boolean => {
     const errors: Record<string, string> = {};
-
     if (currentStep === 1) {
       if (!formValues.orgName.trim()) errors.orgName = "Organization name is required";
       if (!formValues.orgType) errors.orgType = "Please select your industry type";
     }
-
     if (currentStep === 2) {
       if (!formValues.locationName.trim()) errors.locationName = "Location name is required";
       if (formValues.locationState && !/^[A-Za-z]{2}$/.test(formValues.locationState)) {
         errors.locationState = "State must be a 2-letter abbreviation";
       }
     }
-
     setStepErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -164,7 +152,6 @@ export function OnboardingContainer() {
   const handleSubmit = () => {
     if (!user) return;
     setSubmitError(null);
-
     createOrg(
       {
         userId: user.id,
@@ -184,6 +171,10 @@ export function OnboardingContainer() {
       {
         onSuccess: (data) => {
           setOrgNameCreated(data.name);
+          if (isAddMode) {
+            // Signal OrgContext to activate this org when the dashboard loads
+            sessionStorage.setItem("rosta_pending_org", data.id);
+          }
           setSlideDirection("forward");
           setCurrentStep(5);
         },
@@ -213,6 +204,7 @@ export function OnboardingContainer() {
       submitError={submitError}
       orgNameCreated={orgNameCreated}
       user={user}
+      isAddMode={isAddMode}
       onFieldChange={handleFieldChange}
       onAddEmail={handleAddEmail}
       onRemoveEmail={handleRemoveEmail}
