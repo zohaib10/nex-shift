@@ -1,7 +1,20 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(node -e \"const { PrismaClient } = require\\('@prisma/client'\\); const p = new PrismaClient\\(\\); console.log\\(Object.keys\\(p\\).filter\\(k => !k.startsWith\\('_'\\) && !k.startsWith\\('\\\\$'\\)\\)\\)\")",
+      "Bash(host iskdxmwxseojkoezgpqo.supabase.co)",
+      "Bash(nslookup iskdxmwxseojkoezgpqo.supabase.co)",
+      "Bash(ping -c 2 8.8.8.8)",
+      "Bash(ping -c 2 google.com)",
+      "Bash(curl -sS -o /dev/null -w \"HTTP %{http_code}\\\\n\" --max-time 10 https://iskdxmwxseojkoezgpqo.supabase.co/auth/v1/health)",
+      "Bash(npx tsc *)",
+      "Bash(npx prisma *)",
+      "Read(//Users/zohaibahmad/.nvm/versions/node/**)",
+      "Read(//Users/zohaibahmad/**)",
+      "Bash(brew services *)",
+      "Bash(nc -z -v localhost 5432)",
+      "Bash(echo \"exit:$?\")"
     ]
   }
 }

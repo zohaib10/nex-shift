@@ -13,6 +13,7 @@ import { OrganizationsService } from './organizations.service';
 import { CreateOrgDto } from './dto/create-org.dto';
 import { ValidatePromoDto } from './dto/validate-promo.dto';
 import { AddLocationDto } from './dto/add-location.dto';
+import { InviteMemberDto } from './dto/invite-member.dto';
 
 @Controller('organizations')
 export class OrganizationsController {
@@ -50,5 +51,37 @@ export class OrganizationsController {
   @Get('has-membership/:userId')
   async hasMembership(@Param('userId') userId: string) {
     return this.organizationsService.hasMembership(userId);
+  }
+
+  @Post(':orgId/invite')
+  async inviteMember(@Param('orgId') orgId: string, @Body() dto: InviteMemberDto) {
+    return this.organizationsService.inviteMember(orgId, dto);
+  }
+
+  @Get(':orgId/locations/:locationId/requests')
+  async getLocationRequests(
+    @Param('orgId') orgId: string,
+    @Param('locationId') locationId: string,
+  ) {
+    return this.organizationsService.getLocationRequests(orgId, locationId);
+  }
+
+  @Get(':orgId/requests')
+  async getOrgRequests(@Param('orgId') orgId: string) {
+    return this.organizationsService.getOrgRequests(orgId);
+  }
+
+  @Get('invites/:token')
+  async getInvite(@Param('token') token: string) {
+    return this.organizationsService.getInviteByToken(token);
+  }
+
+  @Post('invites/:token/accept')
+  async acceptInvite(
+    @Param('token') token: string,
+    @Body('userId') userId: string,
+  ) {
+    if (!userId) throw new BadRequestException('userId is required');
+    return this.organizationsService.acceptInvite(token, userId);
   }
 }

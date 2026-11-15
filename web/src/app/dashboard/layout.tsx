@@ -1,18 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { DashboardHeader } from "@/features/Dashboard/components/Header";
+import { useRouter } from "next/navigation";
 import { PageLoader } from "@/components/PageLoader";
 import { OrgProvider } from "@/context/OrgContext";
-import api from "@/lib/api";
+import { AppSidebar } from "@/features/Dashboard/components/AppSidebar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
-
   useEffect(() => {
     const raw = localStorage.getItem("rosta_session");
 
@@ -24,44 +20,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const session = JSON.parse(raw);
 
     if (!session.id) {
-      // Stale session without an id — clear it and send to login
       localStorage.removeItem("rosta_session");
       router.replace("/");
       return;
     }
 
-    // Profile page is always accessible — it's where logout lives
-    if (pathname === "/dashboard/profile") {
-      setUser(session);
-      setIsLoading(false);
-      return;
-    }
-
-    // Assign the user immediately and stop loading without blocking access
-    setUser(session);
     setIsLoading(false);
-  }, [router, pathname]);
+  }, [router]);
 
   if (isLoading) {
     return <PageLoader />;
   }
 
-  // Main dashboard uses its own sidebar layout — no top header needed here
-  if (pathname === "/dashboard") {
-    return (
-      <OrgProvider>
-        <div className="bg-bg text-tx transition-colors duration-300">
-          {children}
-        </div>
-      </OrgProvider>
-    );
-  }
-
   return (
     <OrgProvider>
-      <div className="min-h-[100svh] bg-bg text-tx flex flex-col relative transition-colors duration-300">
-        <DashboardHeader user={user} />
-        {children}
+      <div className="flex h-[100svh] overflow-hidden bg-bg text-tx transition-colors duration-300">
+        <AppSidebar />
+        <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {children}
+        </main>
       </div>
     </OrgProvider>
   );

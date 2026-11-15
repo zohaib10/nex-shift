@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { DashboardComponent, EmptyOrgComponent } from "./dashboard.component";
 import { PageLoader } from "@/components/PageLoader";
 import { useOrg } from "@/context/OrgContext";
@@ -8,7 +8,7 @@ import { useOrg } from "@/context/OrgContext";
 export function DashboardContainer() {
   const [user, setUser] = useState<any>(null);
   const [userLoaded, setUserLoaded] = useState(false);
-  const { activeOrg, isLoading: orgsLoading, addLocationToOrg } = useOrg();
+  const { activeOrg, isLoading: orgsLoading } = useOrg();
 
   useEffect(() => {
     const raw = localStorage.getItem("rosta_session");
@@ -22,10 +22,5 @@ export function DashboardContainer() {
     return <EmptyOrgComponent user={user} />;
   }
 
-  return (
-    <DashboardComponent
-      user={user}
-      onLocationAdded={(loc) => addLocationToOrg(activeOrg.id, loc)}
-    />
-  );
+  return <DashboardComponent user={user} />;
 }

@@ -2,12 +2,16 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateOrgDto } from './dto/create-org.dto';
 import { AddLocationDto } from './dto/add-location.dto';
+import { InviteMemberDto } from './dto/invite-member.dto';
+import { Resend } from 'resend';
+import * as crypto from 'crypto';
 
 const STATE_TIMEZONES: Record<string, { timezone: string; label: string }> = {
   AL: { timezone: 'America/Chicago', label: 'Central Time (CT)' },
@@ -216,6 +220,221 @@ export class OrganizationsService {
         timezone: dto.timezone,
       },
       select: { id: true, name: true },
+    });
+  }
+
+  async inviteMember(orgId: string, dto: InviteMemberDto) {
+    const org = await this.prisma.organization.findUnique({ where: { id: orgId } });
+    if (!org) throw new NotFoundException('Organization not found');
+
+    const locationIds = [...new Set(dto.locationIds)];
+    const locations = await this.prisma.location.findMany({
+      where: { id: { in: locationIds }, orgId },
+      select: { id: true, name: true },
+    });
+    if (locations.length !== locationIds.length) {
+      throw new NotFoundException('One or more locations not found');
+    }
+
+    // Check for an existing pending (non-expired) invite for this email at any of the requested locations
+    const existing = await this.prisma.memberRequest.findFirst({
+      where: {
+        orgId,
+        email: dto.email.toLowerCase(),
+        locationId: { in: locationIds },
+        status: 'pending',
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (existing) {
+      throw new ConflictException('A pending invite already exists for this email at one of the selected locations');
+    }
+
+    // Check they aren't already a member of any requested location
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email.toLowerCase() } });
+    if (user) {
+      const alreadyMember = await this.prisma.locationMember.findFirst({
+        where: { userId: user.id, locationId: { in: locationIds } },
+      });
+      if (alreadyMember) {
+        throw new ConflictException('This user is already a member of one of the selected locations');
+      }
+    }
+
+    // One shared token across the batch — a single accept action grants every location at once
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    const requests = await this.prisma.$transaction(
+      locationIds.map((locationId) =>
+        this.prisma.memberRequest.create({
+          data: {
+            orgId,
+            locationId,
+            email: dto.email.toLowerCase(),
+            invitedById: dto.invitedById,
+            token,
+            expiresAt,
+          },
+        }),
+      ),
+    );
+
+    await this.sendInviteEmail({
+      to: dto.email,
+      token,
+      locationNames: locations.map((l) => l.name),
+      orgName: org.name,
+    });
+
+    return { requests, locations };
+  }
+
+  private async sendInviteEmail({
+    to,
+    token,
+    locationNames,
+    orgName,
+  }: {
+    to: string;
+    token: string;
+    locationNames: string[];
+    orgName: string;
+  }) {
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      console.warn('RESEND_API_KEY not set — invite email will NOT be sent.');
+      return;
+    }
+
+    const resend = new Resend(resendApiKey);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const acceptLink = `${frontendUrl}/invite?token=${token}`;
+    const locationLabel =
+      locationNames.length > 1
+        ? `${locationNames.slice(0, -1).join(', ')} and ${locationNames[locationNames.length - 1]}`
+        : locationNames[0];
+
+    const { error } = await resend.emails.send({
+      from: 'NexShift <onboarding@resend.dev>',
+      to,
+      subject: `You've been invited to join ${orgName} on NexShift`,
+      html: `
+        <div style="font-family: 'Helvetica Neue', sans-serif; max-width: 520px; margin: 0 auto; color: #333;">
+          <h1 style="color: #07090E; margin-bottom: 8px;">You're invited</h1>
+          <p>You've been invited to join <strong>${locationLabel}</strong> (${orgName}) as a staff member on NexShift.</p>
+          <p style="margin: 32px 0;">
+            <a href="${acceptLink}" style="background-color: #00D48A; color: #07090E; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Accept Invitation
+            </a>
+          </p>
+          <p style="color: #999; font-size: 13px;">This invitation expires in 7 days. If you didn't expect this, you can safely ignore it.</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error('Failed to send invite email:', error);
+    }
+  }
+
+  async getInviteByToken(token: string) {
+    const requests = await this.prisma.memberRequest.findMany({
+      where: { token },
+      include: {
+        location: { select: { id: true, name: true } },
+        org: { select: { id: true, name: true } },
+      },
+    });
+
+    if (requests.length === 0) throw new NotFoundException('Invite not found');
+    const [first] = requests;
+    const locations = requests.map((r) => r.location);
+
+    if (first.status !== 'pending') {
+      return { ...first, locations, invalid: true, reason: first.status };
+    }
+    if (new Date() > first.expiresAt) {
+      await this.prisma.memberRequest.updateMany({
+        where: { token },
+        data: { status: 'expired' },
+      });
+      return { ...first, locations, status: 'expired', invalid: true, reason: 'expired' };
+    }
+
+    return { ...first, locations, invalid: false };
+  }
+
+  async acceptInvite(token: string, userId: string) {
+    const requests = await this.prisma.memberRequest.findMany({ where: { token } });
+
+    if (requests.length === 0) throw new NotFoundException('Invite not found');
+    const [first] = requests;
+    if (first.status !== 'pending') {
+      throw new BadRequestException(`Invite is already ${first.status}`);
+    }
+    if (new Date() > first.expiresAt) {
+      await this.prisma.memberRequest.updateMany({
+        where: { token },
+        data: { status: 'expired' },
+      });
+      throw new BadRequestException('Invite has expired');
+    }
+
+    const [, ...locationMembers] = await this.prisma.$transaction([
+      this.prisma.memberRequest.updateMany({
+        where: { token },
+        data: { status: 'accepted', respondedAt: new Date() },
+      }),
+      ...requests.map((r) =>
+        this.prisma.locationMember.upsert({
+          where: { locationId_userId: { locationId: r.locationId, userId } },
+          create: { locationId: r.locationId, userId, role: 'staff' },
+          update: {},
+        }),
+      ),
+    ]);
+
+    return { requests, locationMembers };
+  }
+
+  async getLocationRequests(orgId: string, locationId: string) {
+    const location = await this.prisma.location.findFirst({
+      where: { id: locationId, orgId },
+    });
+    if (!location) throw new NotFoundException('Location not found');
+
+    return this.prisma.memberRequest.findMany({
+      where: { locationId, orgId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        status: true,
+        expiresAt: true,
+        respondedAt: true,
+        createdAt: true,
+        location: { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  async getOrgRequests(orgId: string) {
+    const org = await this.prisma.organization.findUnique({ where: { id: orgId } });
+    if (!org) throw new NotFoundException('Organization not found');
+
+    return this.prisma.memberRequest.findMany({
+      where: { orgId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        status: true,
+        expiresAt: true,
+        respondedAt: true,
+        createdAt: true,
+        location: { select: { id: true, name: true } },
+      },
     });
   }
 

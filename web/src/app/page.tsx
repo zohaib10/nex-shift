@@ -21,12 +21,22 @@ import {
 } from "lucide-react";
 
 import { PublicHeader } from "@/components/PublicHeader";
-import { GuestGuard } from "@/components/GuestGuard";
 
 export default function Home() {
   const router = useRouter();
+  const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
+    const session = localStorage.getItem("rosta_session");
+    if (session) {
+      router.replace("/dashboard");
+    } else {
+      setReady(true);
+    }
+  }, [router]);
+
+  React.useEffect(() => {
+    if (!ready) return;
     const obs = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
@@ -37,10 +47,11 @@ export default function Home() {
     );
     document.querySelectorAll(".rev").forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  }, []);
+  }, [ready]);
+
+  if (!ready) return null;
 
   return (
-    <GuestGuard>
       <main>
         <PublicHeader variant="marketing" />
 
@@ -245,6 +256,5 @@ export default function Home() {
         <div className="text-[0.76rem] text-tx3 transition-colors duration-300">© 2026 NexShift. All rights reserved.</div>
       </footer>
     </main>
-  </GuestGuard>
   );
 }

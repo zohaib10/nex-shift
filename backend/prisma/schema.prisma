@@ -51,8 +51,9 @@ model Organization {
   maxLocations Int      @default(1) @map("max_locations")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  locations Location[]
-  members   OrgMember[]
+  locations      Location[]
+  members        OrgMember[]
+  memberRequests MemberRequest[]
 
   @@map("organizations")
 }
@@ -68,6 +69,9 @@ model Location {
   timezone  String?
   createdAt DateTime     @default(now()) @map("created_at")
 
+  members   LocationMember[]
+  requests  MemberRequest[]
+
   @@map("locations")
 }
 
@@ -81,6 +85,42 @@ model OrgMember {
 
   @@unique([orgId, userId])
   @@map("org_members")
+}
+
+// Confirmed staff at a location (created when a MemberRequest is accepted)
+model LocationMember {
+  id         String   @id @default(uuid())
+  locationId String   @map("location_id")
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  role       String   @default("staff")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([locationId, userId])
+  @@map("location_members")
+}
+
+// Invite sent to an email for a specific location. Inviting one email to
+// multiple locations creates multiple rows that share the same `token` —
+// the token acts as the invite batch id, so one accept action grants every
+// location in the batch at once.
+// status: pending | accepted | declined | expired
+model MemberRequest {
+  id          String    @id @default(uuid())
+  orgId       String    @map("org_id")
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  locationId  String    @map("location_id")
+  location    Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  email       String
+  invitedById String    @map("invited_by_id")
+  status      String    @default("pending")
+  token       String
+  expiresAt   DateTime  @map("expires_at")
+  respondedAt DateTime? @map("responded_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([token])
+  @@map("member_requests")
 }
 
 model PromoCode {
