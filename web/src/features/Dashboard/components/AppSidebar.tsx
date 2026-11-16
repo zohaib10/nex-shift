@@ -12,7 +12,6 @@ import {
   Settings,
   Plus,
   ChevronDown,
-  X,
   Map,
   Building,
   MapPin,
@@ -20,9 +19,11 @@ import {
   LogOut,
 } from "lucide-react";
 import api from "@/lib/api";
-import { supabase } from "@/lib/supabase";
+import { logout } from "@/lib/session";
 import { useTimezone } from "@/features/onboarding/hooks/useTimezone.hook";
 import { useOrg } from "@/context/OrgContext";
+import { SlidePanel } from "@/components/ui/SlidePanel";
+import { ORG_ROLE_LABEL, canCreateOrg, dashboardKind, isOrgAdmin } from "@/lib/roles";
 
 // ─── types ───────────────────────────────────────────────────────────────────
 
@@ -45,17 +46,29 @@ function getInitials(name: string): string {
 
 // ─── nav config ──────────────────────────────────────────────────────────────
 
-const NAV_MAIN = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { label: "Schedule", icon: Calendar, href: "/dashboard/schedule" },
-  { label: "Team", icon: Users, href: "/dashboard/team" },
-  { label: "Requests", icon: ClipboardList, href: "/dashboard/requests" },
+type Audience = "admin" | "manager" | "staff";
+
+interface NavEntry {
+  label: string;
+  icon: React.ElementType;
+  href: string;
+  /** Who sees this item. Admins see everything listed for managers too. */
+  for: Audience[];
+  /** Pages that exist yet; the rest show in the menu but don't navigate. */
+  ready?: boolean;
+}
+
+const NAV_MAIN: NavEntry[] = [
+  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", for: ["admin", "manager", "staff"], ready: true },
+  { label: "Schedule", icon: Calendar, href: "/dashboard/schedule", for: ["admin", "manager", "staff"] },
+  { label: "Team", icon: Users, href: "/dashboard/team", for: ["admin"], ready: true },
+  { label: "Requests", icon: ClipboardList, href: "/dashboard/requests", for: ["admin", "manager", "staff"] },
 ];
 
-const NAV_MANAGE = [
-  { label: "Locations", icon: Building2, href: "/dashboard/locations" },
-  { label: "Analytics", icon: BarChart3, href: "/dashboard/analytics" },
-  { label: "Settings", icon: Settings, href: "/dashboard/settings" },
+const NAV_MANAGE: NavEntry[] = [
+  { label: "Locations", icon: Building2, href: "/dashboard/locations", for: ["admin"] },
+  { label: "Analytics", icon: BarChart3, href: "/dashboard/analytics", for: ["admin", "manager"], ready: true },
+  { label: "Settings", icon: Settings, href: "/dashboard/settings", for: ["admin"] },
 ];
 
 // ─── NavItem ──────────────────────────────────────────────────────────────────
@@ -64,13 +77,19 @@ function NavItem({
   label,
   icon: Icon,
   active,
+  onClick,
 }: {
   label: string;
   icon: React.ElementType;
   active: boolean;
+  onClick?: () => void;
 }) {
   return (
     <div
+      role={onClick ? "link" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter") onClick(); } : undefined}
       className={`flex items-center gap-[8px] p-[7px_9px] rounded-[8px] cursor-pointer transition-colors duration-150 mb-[1px] ${
         active ? "bg-acc-bg" : "hover:bg-surf2"
       }`}
@@ -157,27 +176,7 @@ function AddLocationPanel({
     "w-full bg-bg border border-brd2 rounded-[10px] py-[10px] px-[13px] text-[0.88rem] text-tx outline-none transition-all duration-200 focus:ring-[3px] focus:ring-acc-brd focus:border-acc";
 
   return (
-    <>
-      {/* Overlay */}
-      <div
-        className={`fixed inset-0 bg-black/40 z-[49] transition-opacity duration-300 ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
-        onClick={onClose}
-      />
-      {/* Panel */}
-      <div
-        className={`fixed top-0 right-0 bottom-0 w-[340px] bg-surf border-l border-brd2 z-[50] flex flex-col shadow-2xl transition-transform duration-300 ease-[cubic-bezier(.22,1,.36,1)] ${open ? "translate-x-0" : "translate-x-full"}`}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-[18px] py-[14px] border-b border-brd shrink-0">
-          <span className="text-[0.86rem] font-[600] text-tx">Add Location</span>
-          <button
-            onClick={onClose}
-            className="w-[26px] h-[26px] rounded-[6px] border border-brd2 bg-transparent flex items-center justify-center text-tx2 hover:bg-surf2 transition-colors cursor-pointer"
-          >
-            <X className="w-[13px] h-[13px]" strokeWidth={2} />
-          </button>
-        </div>
-
+    <SlidePanel open={open} onClose={onClose} title="Add Location">
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-[18px] space-y-[16px]">
           {/* Location name */}
@@ -281,8 +280,7 @@ function AddLocationPanel({
             )}
           </button>
         </div>
-      </div>
-    </>
+    </SlidePanel>
   );
 }
 
@@ -291,11 +289,15 @@ function AddLocationPanel({
 export function AppSidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { activeOrg, activeLocId, setActiveLocId, setActiveOrgId, orgs, addLocationToOrg } = useOrg();
+  const { activeOrg, activeLocId, setActiveLocId, setActiveOrgId, orgs, addLocationToOrg, showAllLocations } = useOrg();
 
   const orgId = activeOrg?.id ?? null;
   const orgName = activeOrg?.name ?? null;
   const locations: OrgLocation[] = activeOrg?.locations ?? [];
+  const audience = dashboardKind(activeOrg);
+  const isAdmin = isOrgAdmin(activeOrg?.role);
+  const navMain = NAV_MAIN.filter((i) => i.for.includes(audience));
+  const navManage = NAV_MANAGE.filter((i) => i.for.includes(audience));
 
   const [panelOpen, setPanelOpen] = React.useState(false);
   const [orgDropOpen, setOrgDropOpen] = React.useState(false);
@@ -316,7 +318,9 @@ export function AppSidebar() {
               <div className="text-[0.82rem] font-[600] tracking-[-0.01em] truncate text-tx">
                 {orgName ?? "My Organization"}
               </div>
-              <div className="text-[0.6rem] text-tx3">Admin</div>
+              <div className="text-[0.6rem] text-tx3">
+                {!activeOrg ? "" : audience === "admin" ? ORG_ROLE_LABEL[activeOrg.role] : audience === "manager" ? "Manager" : "Staff"}
+              </div>
             </div>
             <ChevronDown
               className={`w-[11px] h-[11px] shrink-0 transition-transform duration-200 text-tx3 ${orgDropOpen ? "rotate-180" : ""}`}
@@ -343,13 +347,15 @@ export function AppSidebar() {
                   </div>
                 );
               })}
-              <div
-                onClick={() => { setOrgDropOpen(false); router.push("/onboarding?mode=add"); }}
-                className="flex items-center gap-[7px] px-[11px] py-[8px] cursor-pointer transition-all duration-150 border-t border-brd text-tx3 hover:text-acc hover:bg-surf2"
-              >
-                <Plus className="w-[12px] h-[12px] shrink-0" strokeWidth={2.5} />
-                <span className="text-[0.74rem]">Add organization</span>
-              </div>
+              {canCreateOrg(orgs) && (
+                <div
+                  onClick={() => { setOrgDropOpen(false); router.push("/onboarding?mode=add"); }}
+                  className="flex items-center gap-[7px] px-[11px] py-[8px] cursor-pointer transition-all duration-150 border-t border-brd text-tx3 hover:text-acc hover:bg-surf2"
+                >
+                  <Plus className="w-[12px] h-[12px] shrink-0" strokeWidth={2.5} />
+                  <span className="text-[0.74rem]">Add organization</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -359,8 +365,8 @@ export function AppSidebar() {
           <div className="text-[0.59rem] font-[600] tracking-[0.09em] uppercase px-[9px] pb-[4px] text-tx3">
             Locations
           </div>
-          {/* All Locations row */}
-          {(() => {
+          {/* All Locations row (hidden when the user only has one location) */}
+          {showAllLocations && (() => {
             const active = activeLocId === null;
             return (
               <div
@@ -380,7 +386,7 @@ export function AppSidebar() {
             return (
               <div
                 key={loc.id}
-                onClick={() => setActiveLocId(active ? null : loc.id)}
+                onClick={() => setActiveLocId(active && showAllLocations ? null : loc.id)}
                 className={`flex items-center gap-[7px] px-[9px] py-[6px] rounded-[7px] cursor-pointer transition-colors duration-150 ${active ? "bg-acc-bg" : "hover:bg-surf2"}`}
               >
                 <div className={`w-[5px] h-[5px] rounded-full shrink-0 transition-colors duration-150 ${active ? "bg-acc" : "bg-brd2"}`} />
@@ -391,13 +397,15 @@ export function AppSidebar() {
               </div>
             );
           })}
-          <button
-            onClick={() => setPanelOpen(true)}
-            className="flex items-center gap-[6px] px-[9px] py-[5px] rounded-[7px] w-full text-left mt-[3px] border-none bg-transparent cursor-pointer transition-all duration-150 group hover:bg-surf2"
-          >
-            <Plus className="w-[11px] h-[11px] shrink-0 text-tx3 group-hover:text-acc transition-colors duration-150" strokeWidth={2.5} />
-            <span className="text-[0.74rem] transition-colors duration-150 text-tx3 group-hover:text-acc">Add location</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setPanelOpen(true)}
+              className="flex items-center gap-[6px] px-[9px] py-[5px] rounded-[7px] w-full text-left mt-[3px] border-none bg-transparent cursor-pointer transition-all duration-150 group hover:bg-surf2"
+            >
+              <Plus className="w-[11px] h-[11px] shrink-0 text-tx3 group-hover:text-acc transition-colors duration-150" strokeWidth={2.5} />
+              <span className="text-[0.74rem] transition-colors duration-150 text-tx3 group-hover:text-acc">Add location</span>
+            </button>
+          )}
         </div>
 
         {/* Nav */}
@@ -405,30 +413,34 @@ export function AppSidebar() {
           <div className="text-[0.58rem] font-[600] tracking-[0.09em] uppercase text-tx3 px-[9px] pt-[6px] pb-[4px]">
             Main
           </div>
-          {NAV_MAIN.map((item) => (
+          {navMain.map((item) => (
             <NavItem
               key={item.href}
               label={item.label}
               icon={item.icon}
               active={pathname === item.href}
+              onClick={item.ready ? () => router.push(item.href) : undefined}
             />
           ))}
-          <div className="text-[0.58rem] font-[600] tracking-[0.09em] uppercase text-tx3 px-[9px] pt-[10px] pb-[4px]">
-            Manage
-          </div>
-          {NAV_MANAGE.map((item) => (
+          {navManage.length > 0 && (
+            <div className="text-[0.58rem] font-[600] tracking-[0.09em] uppercase text-tx3 px-[9px] pt-[10px] pb-[4px]">
+              Manage
+            </div>
+          )}
+          {navManage.map((item) => (
             <NavItem
               key={item.href}
               label={item.label}
               icon={item.icon}
               active={pathname === item.href}
+              onClick={item.ready ? () => router.push(item.href) : undefined}
             />
           ))}
         </nav>
 
         <div className="p-[10px] border-t border-brd shrink-0">
           <button
-            onClick={async () => { localStorage.removeItem("rosta_session"); await supabase.auth.signOut(); router.push("/"); }}
+            onClick={async () => { await logout(); router.push("/"); }}
             className="w-full flex items-center gap-[8px] p-[7px_9px] rounded-[8px] hover:bg-surf2 transition-colors duration-150 text-left"
           >
             <LogOut className="w-[14px] h-[14px] text-tx3 shrink-0" strokeWidth={2} />
@@ -440,7 +452,7 @@ export function AppSidebar() {
       <AddLocationPanel
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
-        onSaved={(loc) => { if (orgId) addLocationToOrg(orgId, loc); }}
+        onSaved={(loc) => { if (orgId) addLocationToOrg(orgId, { ...loc, role: "manager" }); }}
         orgId={orgId}
       />
     </>

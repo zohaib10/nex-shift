@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { useLogin } from "@/hooks/auth/useLogin";
+import { useLogin, EmailNotVerifiedError } from "@/hooks/auth/useLogin";
+import { postLoginPath } from "@/lib/session";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Mail, Lock, Eye, EyeOff, Loader2, KeyRound, AlertTriangle, CheckCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -41,16 +42,14 @@ export default function Login() {
   const onLoginSubmit = (data: LoginFormData) => {
     setErrBanner(false);
     loginUser(data, {
-      onSuccess: (response) => {
-        localStorage.setItem("rosta_session", JSON.stringify({
-          id: response.id,
-          firstName: response.firstName,
-          lastName: response.lastName,
-          email: response.email,
-        }));
-        router.push('/dashboard');
+      onSuccess: () => {
+        router.push(postLoginPath());
       },
       onError: (err) => {
+        if (err instanceof EmailNotVerifiedError) {
+          router.push(`/verify-email?email=${encodeURIComponent(err.email)}&send=1`);
+          return;
+        }
         console.error("Login failed:", err);
         setErrBanner(true);
       }

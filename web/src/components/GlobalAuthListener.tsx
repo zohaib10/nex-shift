@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import api from "@/lib/api";
+import { hasSession, postLoginPath, syncProfile } from "@/lib/session";
 
 export function GlobalAuthListener() {
   const router = useRouter();
@@ -14,41 +14,22 @@ export function GlobalAuthListener() {
     if (pathname === "/auth/callback") return;
 
     // Bounce logged in users out of marketing/auth pages directly into the dashboard
-    if (localStorage.getItem("rosta_session") && (pathname === "/" || pathname === "/login" || pathname === "/signup")) {
-      router.replace("/dashboard");
-      return;
+    if (pathname === "/" || pathname === "/login" || pathname === "/signup") {
+      hasSession().then((ok) => { if (ok) router.replace("/dashboard"); });
     }
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // If we just signed in via a Supabase provider but we don't have our local rosta_session yet
-      if (event === "SIGNED_IN" && session?.user && !localStorage.getItem("rosta_session")) {
-        try {
-          const names = session.user.user_metadata?.full_name?.split(' ') || [];
-          const firstName = names[0] || 'User';
-          const lastName = names.slice(1).join(' ') || '';
-
-          // Sync with the backend database
-          const response = await api.post('/auth/google-sync', {
-            supabaseId: session.user.id,
-            email: session.user.email,
-            firstName,
-            lastName
-          });
-
-          // Establish our local mocked backend session
-          localStorage.setItem("rosta_session", JSON.stringify({
-            id: response.data.id,
-            supabaseId: response.data.supabaseId,
-            firstName: response.data.firstName,
-            lastName: response.data.lastName,
-            email: response.data.email,
-          }));
-
-          // Redirect smoothly safely to dashboard
-          router.replace('/dashboard');
-        } catch (err) {
-          console.error("Failed to perform global sync:", err);
-        }
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      // An OAuth sign-in that landed outside /auth/callback: fetch our profile.
+      if (event === "SIGNED_IN" && session && !localStorage.getItem("rosta_session")) {
+        // Defer: calling Supabase from inside this callback can deadlock supabase-js.
+        setTimeout(() => {
+          syncProfile()
+            .then(() => router.replace(postLoginPath()))
+            .catch((err) => console.error("Failed to sync user with backend:", err));
+        }, 0);
+      }
+      if (event === "SIGNED_OUT") {
+        localStorage.removeItem("rosta_session");
       }
     });
 

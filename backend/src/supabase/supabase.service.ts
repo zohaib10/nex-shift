@@ -32,7 +32,7 @@ export class SupabaseService {
     const { data, error } = await this.client.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
+      email_confirm: false, // confirmed after our email code is verified
     });
 
     if (error) {

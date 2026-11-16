@@ -3,13 +3,13 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { logout } from "@/lib/session";
 
 export default function ProfilePage() {
   const router = useRouter();
 
-  const handleLogout = () => {
-    // We are natively using local storage simulation for now until frontend supabase is wired
-    localStorage.removeItem("rosta_session");
+  const handleLogout = async () => {
+    await logout();
     router.push("/");
   };
 

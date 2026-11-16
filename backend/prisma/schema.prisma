@@ -21,8 +21,26 @@ model User {
   updatedAt      DateTime  @updatedAt
 
   resetTokens    PasswordResetToken[]
+  verificationCodes EmailVerificationCode[]
+  acceptedInvites   MemberRequest[] @relation("AcceptedInvites")
 
   @@map("users")
+}
+
+// 6-digit code emailed at signup. Only the hash is stored. A new code
+// invalidates earlier unused ones; 5 wrong guesses burns a code.
+model EmailVerificationCode {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @map("code_hash")
+  attempts  Int       @default(0)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("email_verification_codes")
 }
 
 model PasswordResetToken {
@@ -80,7 +98,7 @@ model OrgMember {
   orgId     String       @map("org_id")
   org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   userId    String       @map("user_id")
-  role      String       @default("user")
+  role      String       @default("member") // owner | admin | member (see src/organizations/roles.ts)
   createdAt DateTime     @default(now()) @map("created_at")
 
   @@unique([orgId, userId])
@@ -93,7 +111,7 @@ model LocationMember {
   locationId String   @map("location_id")
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   userId     String   @map("user_id")
-  role       String   @default("staff")
+  role       String   @default("staff") // manager | staff
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@unique([locationId, userId])
@@ -113,10 +131,14 @@ model MemberRequest {
   location    Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
   email       String
   invitedById String    @map("invited_by_id")
+  role        String    @default("staff") // what accepting grants: staff | manager | admin
   status      String    @default("pending")
   token       String
   expiresAt   DateTime  @map("expires_at")
   respondedAt DateTime? @map("responded_at")
+  // Who accepted it. Set on accept; older accepted rows have none.
+  acceptedByUserId String? @map("accepted_by_user_id")
+  acceptedBy       User?   @relation("AcceptedInvites", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
   createdAt   DateTime  @default(now()) @map("created_at")
 
   @@index([token])

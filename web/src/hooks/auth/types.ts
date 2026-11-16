@@ -20,6 +20,7 @@ export interface SignupPayload {
   password: string;
 }
 
+// Our profile, as returned by /auth/signup, /auth/sync and /auth/me.
 export interface SignupResponse {
   id: string;
   supabaseId: string;

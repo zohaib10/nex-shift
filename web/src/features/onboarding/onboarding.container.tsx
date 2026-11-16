@@ -7,6 +7,9 @@ import { useCreateOrg } from "./hooks/useCreateOrg.hook";
 import { useValidatePromo } from "./hooks/useValidatePromo.hook";
 import { useTimezone } from "./hooks/useTimezone.hook";
 import { PageLoader } from "@/components/PageLoader";
+import { hasSession } from "@/lib/session";
+import api from "@/lib/api";
+import { canCreateOrg, type OrgRole } from "@/lib/roles";
 import type { PromoState } from "./steps/PromoConfirmStep.component";
 
 const INITIAL_FORM: OnboardingFormValues = {
@@ -50,15 +53,25 @@ export function OnboardingContainer() {
   const timezoneIana = timezoneData?.timezone ?? "";
 
   useEffect(() => {
-    const raw = localStorage.getItem("rosta_session");
-    if (!raw) {
-      router.replace("/");
+    hasSession().then(async (ok) => {
+      if (!ok) {
+        router.replace("/");
+        setIsChecking(false);
+        return;
+      }
+      // Staff and managers can't create organizations; send them back.
+      try {
+        const { data: orgs } = await api.get<{ role: OrgRole }[]>("/organizations/mine");
+        if (!canCreateOrg(orgs)) {
+          router.replace("/dashboard");
+          return;
+        }
+      } catch {
+        // If this check fails, the backend still refuses the create.
+      }
+      setUser(JSON.parse(localStorage.getItem("rosta_session")!));
       setIsChecking(false);
-      return;
-    }
-    const session = JSON.parse(raw);
-    setUser(session);
-    setIsChecking(false);
+    });
   }, [router]);
 
   if (isChecking || !user) return <PageLoader />;
@@ -154,7 +167,6 @@ export function OnboardingContainer() {
     setSubmitError(null);
     createOrg(
       {
-        userId: user.id,
         name: formValues.orgName,
         type: formValues.orgType,
         typeOther: formValues.orgTypeOther || undefined,

@@ -17,6 +17,7 @@ import {
   Mail,
 } from "lucide-react";
 import Link from "next/link";
+import { clearPendingInvite, hasSession, savePendingInvite } from "@/lib/session";
 
 // ─── view states ─────────────────────────────────────────────────────────────
 type View = "loading" | "invalid" | "expired" | "already_accepted" | "ready" | "success";
@@ -39,6 +40,7 @@ function InviteContent() {
     if (!invite) return;
 
     if (invite.invalid) {
+      clearPendingInvite();
       if (invite.reason === "expired") setView("expired");
       else if (invite.reason === "accepted") setView("already_accepted");
       else setView("invalid");
@@ -48,23 +50,26 @@ function InviteContent() {
     setView("ready");
   }, [token, isLoading, isError, invite]);
 
-  function handleAccept() {
+  async function handleAccept() {
     if (!token) return;
     setAcceptError(null);
 
-    const raw = localStorage.getItem("rosta_session");
-    const session = raw ? JSON.parse(raw) : null;
-
-    if (!session?.id) {
-      // Not logged in — send them to signup/login with a return redirect
-      router.push(`/signup?redirect=/invite&token=${token}`);
+    if (!(await hasSession())) {
+      // Not logged in: remember the invite so signup/login brings them back here.
+      savePendingInvite(token);
+      router.push("/signup");
       return;
     }
 
     acceptInvite(
-      { token, userId: session.id },
+      { token },
       {
-        onSuccess: () => setView("success"),
+        onSuccess: (result) => {
+          clearPendingInvite();
+          // OrgContext opens this org first on the next dashboard load.
+          try { sessionStorage.setItem("rosta_pending_org", result.orgId); } catch {}
+          setView("success");
+        },
         onError: (err) => {
           const msg = err.response?.data?.message || "Something went wrong. Please try again.";
           setAcceptError(msg);
@@ -208,7 +213,9 @@ function InviteContent() {
 
         <Heading as="h1" variant="card" className="!text-[1.5rem] !mb-[6px]">You've been invited</Heading>
         <Text variant="default" className="!font-light !mb-[24px] leading-[1.65]">
-          You've been invited to join the following {invite && invite.locations.length > 1 ? "locations" : "location"} as a staff member.
+          {invite?.role === "admin"
+            ? "You've been invited to help run this organization as an admin."
+            : <>You&apos;ve been invited to join the following {invite && invite.locations.length > 1 ? "locations" : "location"} as {invite?.role === "manager" ? "a manager" : "a staff member"}.</>}
         </Text>
 
         {/* Location / org details */}
@@ -265,9 +272,13 @@ function InviteContent() {
         </button>
 
         <p className="text-[0.75rem] text-tx3 text-center mt-[14px]">
-          Don't have an account?{" "}
-          <Link href={`/signup?redirect=/invite&token=${token}`} className="text-acc hover:opacity-75 transition-opacity">
-            Sign up first
+          New to NexShift?{" "}
+          <Link href="/signup" onClick={() => token && savePendingInvite(token)} className="text-acc hover:opacity-75 transition-opacity">
+            Sign up
+          </Link>
+          {" "}· Have an account?{" "}
+          <Link href="/login" onClick={() => token && savePendingInvite(token)} className="text-acc hover:opacity-75 transition-opacity">
+            Log in
           </Link>
         </p>
       </div>

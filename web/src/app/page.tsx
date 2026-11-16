@@ -21,18 +21,17 @@ import {
 } from "lucide-react";
 
 import { PublicHeader } from "@/components/PublicHeader";
+import { hasSession } from "@/lib/session";
 
 export default function Home() {
   const router = useRouter();
   const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
-    const session = localStorage.getItem("rosta_session");
-    if (session) {
-      router.replace("/dashboard");
-    } else {
-      setReady(true);
-    }
+    hasSession().then((ok) => {
+      if (ok) router.replace("/dashboard");
+      else setReady(true);
+    });
   }, [router]);
 
   React.useEffect(() => {

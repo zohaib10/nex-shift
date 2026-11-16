@@ -4,28 +4,17 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageLoader } from "@/components/PageLoader";
 import { OrgProvider } from "@/context/OrgContext";
+import { hasSession } from "@/lib/session";
 import { AppSidebar } from "@/features/Dashboard/components/AppSidebar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    const raw = localStorage.getItem("rosta_session");
-
-    if (!raw) {
-      router.replace("/");
-      return;
-    }
-
-    const session = JSON.parse(raw);
-
-    if (!session.id) {
-      localStorage.removeItem("rosta_session");
-      router.replace("/");
-      return;
-    }
-
-    setIsLoading(false);
+    hasSession().then((ok) => {
+      if (ok) setIsLoading(false);
+      else router.replace("/");
+    });
   }, [router]);
 
   if (isLoading) {

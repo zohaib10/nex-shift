@@ -2,16 +2,20 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import api from "@/lib/api";
+import { isOrgAdmin, type LocationRole, type OrgRole } from "@/lib/roles";
 
 export interface OrgLocation {
   id: string;
   name: string;
+  /** The user's role here. Admins and owners are managers everywhere. */
+  role: LocationRole;
 }
 
 export interface UserOrg {
   id: string;
   name: string;
-  role: string;
+  role: OrgRole;
+  /** Admins see every location; members only the ones they belong to. */
   locations: OrgLocation[];
 }
 
@@ -24,6 +28,8 @@ interface OrgContextValue {
   addOrg: (org: UserOrg) => void;
   addLocationToOrg: (orgId: string, loc: OrgLocation) => void;
   isLoading: boolean;
+  /** False when the user belongs to only one location (and isn't an admin). */
+  showAllLocations: boolean;
 }
 
 const OrgContext = createContext<OrgContextValue | null>(null);
@@ -35,11 +41,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const raw = localStorage.getItem("rosta_session");
-    if (!raw) { setIsLoading(false); return; }
-    const session = JSON.parse(raw);
-
-    api.get(`/organizations/user/${session.id}`)
+    api.get(`/organizations/mine`)
       .then((res) => {
         const fetched: UserOrg[] = res.data;
         setOrgs(fetched);
@@ -78,8 +80,29 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   const activeOrg = orgs.find((o) => o.id === activeOrgId) ?? null;
 
+  // Staff or managers at a single location have no "All Locations" view:
+  // that one location is always the selected one.
+  const onlyLocationId =
+    activeOrg && !isOrgAdmin(activeOrg.role) && activeOrg.locations.length === 1
+      ? activeOrg.locations[0].id
+      : null;
+  const showAllLocations = !onlyLocationId;
+  const effectiveLocId = onlyLocationId ?? activeLocId;
+
   return (
-    <OrgContext.Provider value={{ orgs, activeOrg, activeLocId, setActiveOrgId, setActiveLocId, addOrg, addLocationToOrg, isLoading }}>
+    <OrgContext.Provider
+      value={{
+        orgs,
+        activeOrg,
+        activeLocId: effectiveLocId,
+        setActiveOrgId,
+        setActiveLocId,
+        addOrg,
+        addLocationToOrg,
+        isLoading,
+        showAllLocations,
+      }}
+    >
       {children}
     </OrgContext.Provider>
   );

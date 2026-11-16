@@ -3,7 +3,6 @@ import api from "@/lib/api";
 import { AxiosError } from "axios";
 
 export interface CreateOrgPayload {
-  userId: string;
   name: string;
   type: string;
   typeOther?: string;

@@ -3,79 +3,46 @@
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import api from "@/lib/api";
+import { postLoginPath, syncProfile } from "@/lib/session";
 import { PageLoader } from "@/components/PageLoader";
 
 export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        try {
-          const names = session.user.user_metadata?.full_name?.split(' ') || [];
-          const firstName = names[0] || 'User';
-          const lastName = names.slice(1).join(' ') || '';
+    let done = false;
 
-          // Send to our backend to ensure they exist in Prisma
-          const response = await api.post('/auth/google-sync', {
-            supabaseId: session.user.id,
-            email: session.user.email,
-            firstName,
-            lastName
-          });
-
-          // Set our standard mock session from the backend response
-          localStorage.setItem("rosta_session", JSON.stringify({
-            id: response.data.id,
-            supabaseId: response.data.supabaseId,
-            firstName: response.data.firstName,
-            lastName: response.data.lastName,
-            email: response.data.email,
-          }));
-
-          // Redirect to the dashboard
-          router.replace('/dashboard');
-        } catch (err) {
-          console.error("Failed to sync Google user with backend:", err);
-          router.replace('/login');
-        }
-      } else {
-        router.replace('/login');
+    // supabase-js exchanges the OAuth code in the URL for a session; once we
+    // have one, let the backend create/fetch our profile from the token.
+    const finish = async () => {
+      if (done) return;
+      done = true;
+      try {
+        await syncProfile();
+        router.replace(postLoginPath());
+      } catch (err) {
+        console.error("Failed to sync user with backend:", err);
+        await supabase.auth.signOut({ scope: "local" });
+        router.replace("/login");
       }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) finish();
     });
 
-    // We can also listen for auth state changes just in case
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        try {
-          const names = session.user.user_metadata?.full_name?.split(' ') || [];
-          const firstName = names[0] || 'User';
-          const lastName = names.slice(1).join(' ') || '';
-
-          const response = await api.post('/auth/google-sync', {
-            supabaseId: session.user.id,
-            email: session.user.email,
-            firstName,
-            lastName
-          });
-
-          localStorage.setItem("rosta_session", JSON.stringify({
-            id: response.data.id,
-            supabaseId: response.data.supabaseId,
-            firstName: response.data.firstName,
-            lastName: response.data.lastName,
-            email: response.data.email,
-          }));
-
-          router.replace('/dashboard');
-        } catch (err) {
-          router.replace('/login');
-        }
-      }
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      // Defer: calling Supabase from inside this callback can deadlock supabase-js.
+      if (event === "SIGNED_IN" && session) setTimeout(finish, 0);
     });
+
+    // No session after a few seconds means the OAuth exchange failed.
+    const timeout = setTimeout(() => {
+      if (!done) router.replace("/login");
+    }, 8000);
 
     return () => {
+      clearTimeout(timeout);
       authListener?.subscription.unsubscribe();
     };
   }, [router]);

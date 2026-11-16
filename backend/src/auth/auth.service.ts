@@ -1,35 +1,45 @@
 import {
   Injectable,
+  BadRequestException,
   ConflictException,
   InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
+import * as crypto from 'crypto';
+import type { User } from '@prisma/client';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from '../supabase/supabase.service';
+import { EmailService, escapeHtml } from '../email/email.service';
 import { SignupDto } from './dto/signup.dto';
-import { Resend } from 'resend';
+
+const CODE_TTL_MS = 15 * 60 * 1000;
+const CODE_MAX_ATTEMPTS = 5;
+const CODE_RESEND_COOLDOWN_MS = 60 * 1000;
+const CODE_MAX_PER_DAY = 5;
+const TEST_MODE_CODE = '123456';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private supabase: SupabaseService,
+    private email: EmailService,
   ) {}
 
   async signup(dto: SignupDto) {
-    // 1. Check if user already exists in our DB
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
+    const email = dto.email.toLowerCase();
 
+    const existingUser = await this.prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new ConflictException('A user with this email already exists');
     }
 
-    // 2. Create user in Supabase Auth
+    // Created unconfirmed: Supabase won't issue a password session or link a
+    // Google login to this account until the email code is verified.
     let supabaseUser;
     try {
-      supabaseUser = await this.supabase.createUser(dto.email, dto.password);
+      supabaseUser = await this.supabase.createUser(email, dto.password);
     } catch (error: any) {
       console.error('Supabase signup error:', error);
       if (error?.message?.includes('already been registered')) {
@@ -40,20 +50,23 @@ export class AuthService {
       );
     }
 
-    // 3. Create user record in our own database
     const user = await this.prisma.user.create({
       data: {
         supabaseId: supabaseUser.id,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        email: dto.email,
+        email,
         phoneNumber: dto.phoneNumber,
         emailVerified: false,
         phoneVerified: false,
       },
     });
 
-    // Return user data (without sensitive info)
+    await this.issueVerificationCode(user);
+    return this.toProfile(user);
+  }
+
+  toProfile(user: User) {
     return {
       id: user.id,
       supabaseId: user.supabaseId,
@@ -67,74 +80,137 @@ export class AuthService {
     };
   }
 
-  async login(dto: { email: string; password: string }) {
-    // 1. Authenticate with Supabase
-    const { data, error } = await this.supabase.getClient().auth.signInWithPassword({
-      email: dto.email,
-      password: dto.password,
-    });
+  // ─── email verification ─────────────────────────────────────────────────
 
-    if (error || !data.user) {
-      console.error('Supabase login rejected:', error?.message || 'Unknown error', 'Data:', data);
-      throw new (require('@nestjs/common').UnauthorizedException)(
-        'Invalid email or password',
-      );
-    }
-
-    // 2. Feed the verified user from our own DB
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-
-    if (!user) {
-      throw new (require('@nestjs/common').UnauthorizedException)(
-        'User record not found. Please contact support.',
-      );
-    }
-
-    return {
-      id: user.id,
-      supabaseId: user.supabaseId,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      emailVerified: user.emailVerified,
-      phoneVerified: user.phoneVerified,
-      createdAt: user.createdAt,
-    };
+  private hashCode(userId: string, code: string) {
+    return crypto.createHash('sha256').update(`${userId}:${code}`).digest('hex');
   }
 
-  async forgotPassword(email: string) {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) {
-      console.warn('RESEND_API_KEY is not configured in .env. Password reset email will NOT be sent.');
-      return { success: true, warning: 'Emails are disabled — no RESEND_API_KEY in ENV' };
+  private async issueVerificationCode(user: User) {
+    const code = this.email.testMode
+      ? TEST_MODE_CODE
+      : crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+
+    await this.prisma.$transaction([
+      this.prisma.emailVerificationCode.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.emailVerificationCode.create({
+        data: {
+          userId: user.id,
+          codeHash: this.hashCode(user.id, code),
+          expiresAt: new Date(Date.now() + CODE_TTL_MS),
+        },
+      }),
+    ]);
+
+    await this.email.send({
+      to: user.email,
+      subject: `${code} is your NexShift verification code`,
+      text: `Hi ${user.firstName},\n\nYour NexShift verification code is ${code}. It expires in 15 minutes.\n\nIf you didn't sign up for NexShift, you can ignore this email.`,
+      html: `
+        <div style="font-family: 'Helvetica Neue', sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
+          <h1 style="color: #07090E; margin-bottom: 24px;">Verify your email</h1>
+          <p>Hi ${escapeHtml(user.firstName)},</p>
+          <p>Enter this code in NexShift to finish creating your account:</p>
+          <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 28px 0; color: #07090E;">${code}</p>
+          <p style="color: #999; font-size: 13px;">This code expires in 15 minutes. If you didn't sign up for NexShift, you can ignore this email.</p>
+        </div>
+      `,
+    });
+  }
+
+  /**
+   * Always reports success so the endpoint can't be used to find out which
+   * emails have accounts. Quietly skips sending during the cooldown or past
+   * the daily limit.
+   */
+  async resendVerification(rawEmail: string) {
+    const user = await this.prisma.user.findUnique({ where: { email: rawEmail.toLowerCase() } });
+    if (!user || user.emailVerified) return { success: true };
+
+    const recent = await this.prisma.emailVerificationCode.findMany({
+      where: { userId: user.id, createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    const inCooldown = recent[0] && Date.now() - recent[0].createdAt.getTime() < CODE_RESEND_COOLDOWN_MS;
+    if (inCooldown || recent.length >= CODE_MAX_PER_DAY) return { success: true };
+
+    await this.issueVerificationCode(user);
+    return { success: true };
+  }
+
+  /**
+   * Checks the code, marks the email verified (here and in Supabase), and
+   * returns a one-time token the client exchanges for a session with
+   * supabase.auth.verifyOtp — so the user is logged in straight away.
+   */
+  async verifyEmail(rawEmail: string, code: string) {
+    const invalid = new BadRequestException('That code is incorrect or has expired. Request a new one.');
+
+    const user = await this.prisma.user.findUnique({ where: { email: rawEmail.toLowerCase() } });
+    if (!user || user.emailVerified) throw invalid;
+
+    const record = await this.prisma.emailVerificationCode.findFirst({
+      where: { userId: user.id, usedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!record || record.expiresAt < new Date() || record.attempts >= CODE_MAX_ATTEMPTS) {
+      throw invalid;
     }
 
-    const resend = new Resend(resendApiKey);
+    const expected = Buffer.from(record.codeHash, 'hex');
+    const actual = Buffer.from(this.hashCode(user.id, code), 'hex');
+    if (!crypto.timingSafeEqual(expected, actual)) {
+      const attempts = record.attempts + 1;
+      await this.prisma.emailVerificationCode.update({
+        where: { id: record.id },
+        data: { attempts, ...(attempts >= CODE_MAX_ATTEMPTS ? { usedAt: new Date() } : {}) },
+      });
+      throw invalid;
+    }
 
-    // 1. Verify user exists in our DB
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    const admin = this.supabase.getClient().auth.admin;
+    const { error: confirmError } = await admin.updateUserById(user.supabaseId, { email_confirm: true });
+    if (confirmError) {
+      console.error('Supabase email confirm error:', confirmError);
+      throw new InternalServerErrorException('Could not verify your email. Please try again.');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.emailVerificationCode.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
+      this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } }),
+    ]);
+
+    // generateLink only builds the link; it doesn't send an email.
+    const { data, error } = await admin.generateLink({ type: 'magiclink', email: user.email });
+    if (error || !data.properties?.hashed_token) {
+      console.error('Supabase generateLink error:', error);
+      // Verified, but no auto-login: the client sends them to log in instead.
+      return { verified: true, tokenHash: null };
+    }
+    return { verified: true, tokenHash: data.properties.hashed_token };
+  }
+
+  // ─── password reset ─────────────────────────────────────────────────────
+
+  async forgotPassword(rawEmail: string) {
+    const user = await this.prisma.user.findUnique({ where: { email: rawEmail.toLowerCase() } });
 
     if (!user) {
       // Silent success — protects against user-enumeration attacks
       return { success: true };
     }
 
-    // 2. Invalidate any existing unused tokens for this user
+    // Invalidate any existing unused tokens for this user
     await this.prisma.passwordResetToken.updateMany({
       where: { userId: user.id, usedAt: null },
       data: { usedAt: new Date() },
     });
 
-    // 3. Generate a cryptographically secure token
-    const crypto = require('crypto');
     const token = crypto.randomBytes(32).toString('hex');
-
-    // 4. Store the token with a 15-minute expiry
     await this.prisma.passwordResetToken.create({
       data: {
         token,
@@ -143,20 +219,18 @@ export class AuthService {
       },
     });
 
-    // 5. Build the reset link
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const resetLink = `${frontendUrl}/reset-password?token=${token}`;
 
-    // 6. Send the email via Resend
     try {
-      const { error } = await resend.emails.send({
-        from: 'NexShift <onboarding@resend.dev>',
-        to: email,
+      await this.email.send({
+        to: user.email,
         subject: 'Reset your NexShift password',
+        text: `Hi ${user.firstName},\n\nReset your NexShift password here: ${resetLink}\n\nThis link expires in 15 minutes. If you didn't request this, you can ignore this email.`,
         html: `
           <div style="font-family: 'Helvetica Neue', sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
             <h1 style="color: #07090E; margin-bottom: 24px;">Reset your password</h1>
-            <p>Hi ${user.firstName},</p>
+            <p>Hi ${escapeHtml(user.firstName)},</p>
             <p>We received a request to reset your password for your NexShift account.</p>
             <p style="margin: 32px 0;">
               <a href="${resetLink}" style="background-color: #00D48A; color: #07090E; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
@@ -165,21 +239,15 @@ export class AuthService {
           </div>
         `,
       });
-
-      if (error) {
-        console.error('Resend email error:', error);
-        throw new InternalServerErrorException('Failed to send reset email');
-      }
-
-      return { success: true };
     } catch (e) {
-      console.error('Unexpected error sending reset email:', e);
+      console.error('Failed to send reset email:', e);
       throw new InternalServerErrorException('Failed to send reset email');
     }
+
+    return { success: true };
   }
 
   async resetPassword(token: string, newPassword: string) {
-    // 1. Find the token record
     const resetToken = await this.prisma.passwordResetToken.findUnique({
       where: { token },
       include: { user: true },
@@ -188,18 +256,14 @@ export class AuthService {
     if (!resetToken) {
       throw new UnauthorizedException('Invalid or expired reset link.');
     }
-
-    // 2. Check if already used
     if (resetToken.usedAt) {
       throw new UnauthorizedException('This reset link has already been used.');
     }
-
-    // 3. Check if expired
     if (new Date() > resetToken.expiresAt) {
       throw new UnauthorizedException('This reset link has expired. Please request a new one.');
     }
 
-    // 4. Update the password and auto-confirm email in Supabase using the admin API
+    // Using the emailed link proves they own the inbox, so this also verifies the email.
     const { error } = await this.supabase.getClient().auth.admin.updateUserById(
       resetToken.user.supabaseId,
       {
@@ -213,50 +277,57 @@ export class AuthService {
       throw new InternalServerErrorException('Failed to update password. Please try again.');
     }
 
-    // 5. Mark the token as used
-    await this.prisma.passwordResetToken.update({
-      where: { id: resetToken.id },
-      data: { usedAt: new Date() },
-    });
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { emailVerified: true },
+      }),
+    ]);
 
     return { success: true };
   }
 
-  async googleSync(dto: import('./dto/google-sync.dto').GoogleSyncDto) {
-    let user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { supabaseId: dto.supabaseId },
-          { email: dto.email }
-        ]
-      }
-    });
+  // ─── session sync ───────────────────────────────────────────────────────
 
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          supabaseId: dto.supabaseId,
-          email: dto.email,
-          firstName: dto.firstName || 'User',
-          lastName: dto.lastName || '',
-          phoneNumber: '',
-          phoneVerified: false,
-          emailVerified: true
-        }
-      });
-    } else if (!user.supabaseId) {
-      user = await this.prisma.user.update({
-        where: { id: user.id },
-        data: { supabaseId: dto.supabaseId, emailVerified: true }
-      });
+  /**
+   * Identity comes only from the verified access token, never the request body.
+   * Supabase links a Google identity to an existing auth user with the same
+   * verified email, so an existing account keeps its supabaseId; we never link
+   * DB rows by email here.
+   */
+  async sync(supabaseUser: SupabaseUser) {
+    const existing = await this.prisma.user.findUnique({
+      where: { supabaseId: supabaseUser.id },
+    });
+    if (existing) return this.toProfile(existing);
+
+    const email = supabaseUser.email?.toLowerCase();
+    if (!email || !supabaseUser.email_confirmed_at) {
+      throw new UnauthorizedException('A verified email is required');
     }
 
-    return {
-      id: user.id,
-      supabaseId: user.supabaseId,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-    };
+    const emailTaken = await this.prisma.user.findUnique({ where: { email } });
+    if (emailTaken) {
+      throw new ConflictException('An account with this email already exists');
+    }
+
+    const meta = supabaseUser.user_metadata ?? {};
+    const names: string[] = (meta.full_name ?? meta.name ?? '').split(' ').filter(Boolean);
+    const user = await this.prisma.user.create({
+      data: {
+        supabaseId: supabaseUser.id,
+        email,
+        firstName: meta.given_name || names[0] || 'User',
+        lastName: meta.family_name || names.slice(1).join(' '),
+        phoneNumber: '',
+        emailVerified: true,
+        phoneVerified: false,
+      },
+    });
+    return this.toProfile(user);
   }
 }

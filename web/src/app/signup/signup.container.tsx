@@ -15,14 +15,7 @@ export function SignupContainer() {
     setApiError(null);
     mutate(data, {
       onSuccess: (response) => {
-        // Save the basic user info to local storage so the dashboard catches an active authenticated session
-        localStorage.setItem("rosta_session", JSON.stringify({
-          id: response.id,
-          firstName: response.firstName,
-          lastName: response.lastName,
-          email: response.email,
-        }));
-        router.push('/dashboard');
+        router.push(`/verify-email?email=${encodeURIComponent(response.email)}`);
       },
       onError: (err) => {
         const msg = err.response?.data?.message || err.message || "An error occurred during signup.";

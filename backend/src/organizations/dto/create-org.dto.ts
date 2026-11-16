@@ -9,10 +9,6 @@ import {
 export class CreateOrgDto {
   @IsString()
   @IsNotEmpty()
-  userId: string;
-
-  @IsString()
-  @IsNotEmpty()
   name: string;
 
   @IsString()

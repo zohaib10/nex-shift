@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { AxiosError } from "axios";
+import type { InviteRole } from "@/lib/roles";
 
 export interface InviteDetails {
   id: string;
   email: string;
+  role: InviteRole;
   status: string;
   expiresAt: string;
   invalid: boolean;
@@ -27,12 +29,12 @@ export function useInviteDetails(token: string | null) {
 
 export function useAcceptInvite() {
   return useMutation<
-    { request: InviteDetails; locationMember: unknown },
+    { orgId: string; role: InviteRole },
     AxiosError<{ message: string }>,
-    { token: string; userId: string }
+    { token: string }
   >({
-    mutationFn: async ({ token, userId }) => {
-      const { data } = await api.post(`/organizations/invites/${token}/accept`, { userId });
+    mutationFn: async ({ token }) => {
+      const { data } = await api.post(`/organizations/invites/${token}/accept`);
       return data;
     },
   });
@@ -44,13 +46,13 @@ export function useInviteMember(orgId: string | null) {
   return useMutation<
     unknown,
     AxiosError<{ message: string }>,
-    { email: string; invitedById: string; locationIds: string[] }
+    { email: string; locationIds: string[]; role: InviteRole }
   >({
-    mutationFn: async ({ email, invitedById, locationIds }) => {
+    mutationFn: async ({ email, locationIds, role }) => {
       const { data } = await api.post(`/organizations/${orgId}/invite`, {
         email,
-        invitedById,
         locationIds,
+        role,
       });
       return data;
     },
