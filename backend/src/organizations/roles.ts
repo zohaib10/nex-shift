@@ -20,11 +20,14 @@ export type LocationRole = (typeof LOCATION_ROLES)[number];
 export const INVITE_ROLES = ['staff', 'manager', 'admin'] as const;
 export type InviteRole = (typeof INVITE_ROLES)[number];
 
-export const isOrgAdmin = (role: OrgRole) => role === 'owner' || role === 'admin';
+export const isOrgAdmin = (role: OrgRole) =>
+  role === 'owner' || role === 'admin';
 
 /** Rows written before these roles existed used 'user' for members. */
 export function normalizeOrgRole(role: string): OrgRole {
-  return (ORG_ROLES as readonly string[]).includes(role) ? (role as OrgRole) : 'member';
+  return (ORG_ROLES as readonly string[]).includes(role)
+    ? (role as OrgRole)
+    : 'member';
 }
 
 export function normalizeLocationRole(role: string): LocationRole {

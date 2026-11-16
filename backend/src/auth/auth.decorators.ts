@@ -1,6 +1,11 @@
-import { createParamDecorator, ExecutionContext, SetMetadata } from '@nestjs/common';
+import {
+  createParamDecorator,
+  ExecutionContext,
+  SetMetadata,
+} from '@nestjs/common';
 import type { User } from '@prisma/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import type { AuthedRequest } from './authed-request';
 
 export const IS_PUBLIC_KEY = 'isPublic';
 /** Route needs no access token. */
@@ -19,11 +24,14 @@ export const AllowUnverified = () => SetMetadata(ALLOW_UNVERIFIED_KEY, true);
 
 /** Our own DB user for the verified access token. */
 export const CurrentUser = createParamDecorator(
-  (_: unknown, ctx: ExecutionContext): User => ctx.switchToHttp().getRequest().user,
+  (_: unknown, ctx: ExecutionContext): User =>
+    // AuthGuard rejects the request before this runs if there's no user
+    // (except on @AllowUnsynced routes, which use CurrentSupabaseUser).
+    ctx.switchToHttp().getRequest<AuthedRequest>().user!,
 );
 
 /** The Supabase auth user the access token was issued to. */
 export const CurrentSupabaseUser = createParamDecorator(
   (_: unknown, ctx: ExecutionContext): SupabaseUser =>
-    ctx.switchToHttp().getRequest().supabaseUser,
+    ctx.switchToHttp().getRequest<AuthedRequest>().supabaseUser!,
 );

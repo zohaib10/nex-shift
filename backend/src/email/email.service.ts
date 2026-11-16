@@ -3,21 +3,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
-export interface EmailMessage {
-  to: string;
+/** What a template in email/templates/ returns. */
+export interface EmailContent {
   subject: string;
   html: string;
   text: string;
 }
 
-/** Escape text before putting it into email HTML. */
-export function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+export interface EmailMessage extends EmailContent {
+  to: string;
 }
 
 type Transport = 'ses' | 'smtp' | 'log';
@@ -50,8 +44,8 @@ export class EmailService {
     }
 
     this.from = config.get('EMAIL_FROM') ?? 'NexShift <no-reply@localhost>';
-    this.transport = (config.get<string>('EMAIL_TRANSPORT') ??
-      'log') as Transport;
+    const transport = config.get<string>('EMAIL_TRANSPORT') ?? 'log';
+    this.transport = transport as Transport;
 
     if (this.transport === 'ses') {
       const region = config.get<string>('AWS_REGION');
@@ -67,11 +61,13 @@ export class EmailService {
         host,
         port,
         secure: port === 465, // 465 = TLS from the start; 587/1025 = plain or STARTTLS
-        auth: user ? { user, pass: config.get<string>('SMTP_PASS') } : undefined,
+        auth: user
+          ? { user, pass: config.get<string>('SMTP_PASS') }
+          : undefined,
       });
     } else if (this.transport !== 'log') {
       throw new Error(
-        `Unknown EMAIL_TRANSPORT "${this.transport}" (use ses, smtp or log)`,
+        `Unknown EMAIL_TRANSPORT "${transport}" (use ses, smtp or log)`,
       );
     }
 

@@ -1,4 +1,11 @@
-import { Controller, Post, Get, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import type { User } from '@prisma/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { AuthService } from './auth.service';

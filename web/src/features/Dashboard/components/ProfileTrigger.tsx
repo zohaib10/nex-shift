@@ -2,18 +2,10 @@
 
 import { ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type { SessionUser } from "../types";
+import { getInitials } from "../utils/initials";
 
-function getInitials(fullName: string): string {
-  if (!fullName) return "U";
-  return fullName
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-export function ProfileTrigger({ user }: { user: any }) {
+export function ProfileTrigger({ user }: { user: Partial<SessionUser> | null }) {
   const router = useRouter();
   const displayName =
     `${user?.firstName || ""} ${user?.lastName || ""}`.trim() ||

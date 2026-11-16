@@ -10,7 +10,9 @@ import type { User } from '@prisma/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from '../supabase/supabase.service';
-import { EmailService, escapeHtml } from '../email/email.service';
+import { EmailService } from '../email/email.service';
+import { verificationCodeEmail } from '../email/templates/verification-code.email';
+import { passwordResetEmail } from '../email/templates/password-reset.email';
 import { SignupDto } from './dto/signup.dto';
 
 const CODE_TTL_MS = 15 * 60 * 1000;
@@ -30,7 +32,9 @@ export class AuthService {
   async signup(dto: SignupDto) {
     const email = dto.email.toLowerCase();
 
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
     if (existingUser) {
       throw new ConflictException('A user with this email already exists');
     }
@@ -40,13 +44,14 @@ export class AuthService {
     let supabaseUser;
     try {
       supabaseUser = await this.supabase.createUser(email, dto.password);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Supabase signup error:', error);
-      if (error?.message?.includes('already been registered')) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('already been registered')) {
         throw new ConflictException('A user with this email already exists');
       }
       throw new InternalServerErrorException(
-        error?.message || 'Failed to create authentication account',
+        message || 'Failed to create authentication account',
       );
     }
 
@@ -83,7 +88,10 @@ export class AuthService {
   // ─── email verification ─────────────────────────────────────────────────
 
   private hashCode(userId: string, code: string) {
-    return crypto.createHash('sha256').update(`${userId}:${code}`).digest('hex');
+    return crypto
+      .createHash('sha256')
+      .update(`${userId}:${code}`)
+      .digest('hex');
   }
 
   private async issueVerificationCode(user: User) {
@@ -107,17 +115,7 @@ export class AuthService {
 
     await this.email.send({
       to: user.email,
-      subject: `${code} is your NexShift verification code`,
-      text: `Hi ${user.firstName},\n\nYour NexShift verification code is ${code}. It expires in 15 minutes.\n\nIf you didn't sign up for NexShift, you can ignore this email.`,
-      html: `
-        <div style="font-family: 'Helvetica Neue', sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
-          <h1 style="color: #07090E; margin-bottom: 24px;">Verify your email</h1>
-          <p>Hi ${escapeHtml(user.firstName)},</p>
-          <p>Enter this code in NexShift to finish creating your account:</p>
-          <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 28px 0; color: #07090E;">${code}</p>
-          <p style="color: #999; font-size: 13px;">This code expires in 15 minutes. If you didn't sign up for NexShift, you can ignore this email.</p>
-        </div>
-      `,
+      ...verificationCodeEmail({ firstName: user.firstName, code }),
     });
   }
 
@@ -127,16 +125,24 @@ export class AuthService {
    * the daily limit.
    */
   async resendVerification(rawEmail: string) {
-    const user = await this.prisma.user.findUnique({ where: { email: rawEmail.toLowerCase() } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: rawEmail.toLowerCase() },
+    });
     if (!user || user.emailVerified) return { success: true };
 
     const recent = await this.prisma.emailVerificationCode.findMany({
-      where: { userId: user.id, createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+      where: {
+        userId: user.id,
+        createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
       orderBy: { createdAt: 'desc' },
       select: { createdAt: true },
     });
-    const inCooldown = recent[0] && Date.now() - recent[0].createdAt.getTime() < CODE_RESEND_COOLDOWN_MS;
-    if (inCooldown || recent.length >= CODE_MAX_PER_DAY) return { success: true };
+    const inCooldown =
+      recent[0] &&
+      Date.now() - recent[0].createdAt.getTime() < CODE_RESEND_COOLDOWN_MS;
+    if (inCooldown || recent.length >= CODE_MAX_PER_DAY)
+      return { success: true };
 
     await this.issueVerificationCode(user);
     return { success: true };
@@ -148,16 +154,24 @@ export class AuthService {
    * supabase.auth.verifyOtp — so the user is logged in straight away.
    */
   async verifyEmail(rawEmail: string, code: string) {
-    const invalid = new BadRequestException('That code is incorrect or has expired. Request a new one.');
+    const invalid = new BadRequestException(
+      'That code is incorrect or has expired. Request a new one.',
+    );
 
-    const user = await this.prisma.user.findUnique({ where: { email: rawEmail.toLowerCase() } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: rawEmail.toLowerCase() },
+    });
     if (!user || user.emailVerified) throw invalid;
 
     const record = await this.prisma.emailVerificationCode.findFirst({
       where: { userId: user.id, usedAt: null },
       orderBy: { createdAt: 'desc' },
     });
-    if (!record || record.expiresAt < new Date() || record.attempts >= CODE_MAX_ATTEMPTS) {
+    if (
+      !record ||
+      record.expiresAt < new Date() ||
+      record.attempts >= CODE_MAX_ATTEMPTS
+    ) {
       throw invalid;
     }
 
@@ -167,25 +181,42 @@ export class AuthService {
       const attempts = record.attempts + 1;
       await this.prisma.emailVerificationCode.update({
         where: { id: record.id },
-        data: { attempts, ...(attempts >= CODE_MAX_ATTEMPTS ? { usedAt: new Date() } : {}) },
+        data: {
+          attempts,
+          ...(attempts >= CODE_MAX_ATTEMPTS ? { usedAt: new Date() } : {}),
+        },
       });
       throw invalid;
     }
 
     const admin = this.supabase.getClient().auth.admin;
-    const { error: confirmError } = await admin.updateUserById(user.supabaseId, { email_confirm: true });
+    const { error: confirmError } = await admin.updateUserById(
+      user.supabaseId,
+      { email_confirm: true },
+    );
     if (confirmError) {
       console.error('Supabase email confirm error:', confirmError);
-      throw new InternalServerErrorException('Could not verify your email. Please try again.');
+      throw new InternalServerErrorException(
+        'Could not verify your email. Please try again.',
+      );
     }
 
     await this.prisma.$transaction([
-      this.prisma.emailVerificationCode.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
-      this.prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } }),
+      this.prisma.emailVerificationCode.update({
+        where: { id: record.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true },
+      }),
     ]);
 
     // generateLink only builds the link; it doesn't send an email.
-    const { data, error } = await admin.generateLink({ type: 'magiclink', email: user.email });
+    const { data, error } = await admin.generateLink({
+      type: 'magiclink',
+      email: user.email,
+    });
     if (error || !data.properties?.hashed_token) {
       console.error('Supabase generateLink error:', error);
       // Verified, but no auto-login: the client sends them to log in instead.
@@ -197,7 +228,9 @@ export class AuthService {
   // ─── password reset ─────────────────────────────────────────────────────
 
   async forgotPassword(rawEmail: string) {
-    const user = await this.prisma.user.findUnique({ where: { email: rawEmail.toLowerCase() } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: rawEmail.toLowerCase() },
+    });
 
     if (!user) {
       // Silent success — protects against user-enumeration attacks
@@ -219,25 +252,10 @@ export class AuthService {
       },
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
-
     try {
       await this.email.send({
         to: user.email,
-        subject: 'Reset your NexShift password',
-        text: `Hi ${user.firstName},\n\nReset your NexShift password here: ${resetLink}\n\nThis link expires in 15 minutes. If you didn't request this, you can ignore this email.`,
-        html: `
-          <div style="font-family: 'Helvetica Neue', sans-serif; max-width: 500px; margin: 0 auto; color: #333;">
-            <h1 style="color: #07090E; margin-bottom: 24px;">Reset your password</h1>
-            <p>Hi ${escapeHtml(user.firstName)},</p>
-            <p>We received a request to reset your password for your NexShift account.</p>
-            <p style="margin: 32px 0;">
-              <a href="${resetLink}" style="background-color: #00D48A; color: #07090E; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
-            </p>
-            <p style="color: #999; font-size: 13px;">This link expires in 15 minutes. If you didn't request this, you can safely ignore this email.</p>
-          </div>
-        `,
+        ...passwordResetEmail({ firstName: user.firstName, token }),
       });
     } catch (e) {
       console.error('Failed to send reset email:', e);
@@ -260,21 +278,24 @@ export class AuthService {
       throw new UnauthorizedException('This reset link has already been used.');
     }
     if (new Date() > resetToken.expiresAt) {
-      throw new UnauthorizedException('This reset link has expired. Please request a new one.');
+      throw new UnauthorizedException(
+        'This reset link has expired. Please request a new one.',
+      );
     }
 
     // Using the emailed link proves they own the inbox, so this also verifies the email.
-    const { error } = await this.supabase.getClient().auth.admin.updateUserById(
-      resetToken.user.supabaseId,
-      {
+    const { error } = await this.supabase
+      .getClient()
+      .auth.admin.updateUserById(resetToken.user.supabaseId, {
         password: newPassword,
         email_confirm: true,
-      },
-    );
+      });
 
     if (error) {
       console.error('Supabase password update error:', error);
-      throw new InternalServerErrorException('Failed to update password. Please try again.');
+      throw new InternalServerErrorException(
+        'Failed to update password. Please try again.',
+      );
     }
 
     await this.prisma.$transaction([
@@ -315,8 +336,16 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists');
     }
 
-    const meta = supabaseUser.user_metadata ?? {};
-    const names: string[] = (meta.full_name ?? meta.name ?? '').split(' ').filter(Boolean);
+    // What Google (via Supabase) puts in user_metadata; every field is optional.
+    const meta = (supabaseUser.user_metadata ?? {}) as {
+      full_name?: string;
+      name?: string;
+      given_name?: string;
+      family_name?: string;
+    };
+    const names: string[] = (meta.full_name ?? meta.name ?? '')
+      .split(' ')
+      .filter(Boolean);
     const user = await this.prisma.user.create({
       data: {
         supabaseId: supabaseUser.id,

@@ -1,6 +1,6 @@
 import api from "./api";
 import { supabase } from "./supabase";
-import type { SignupResponse } from "@/hooks/auth/types";
+import type { SignupResponse } from "@/features/auth/types";
 
 // The Supabase session (managed by supabase-js) is what authenticates API
 // calls. `rosta_session` is only a cached copy of our profile for the UI.

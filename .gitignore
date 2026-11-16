@@ -1,0 +1,5 @@
+# Claude Code / AI agent files (any directory)
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md

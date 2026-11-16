@@ -1,5 +1,5 @@
-import { DashboardContainer } from "./dashboard.container";
+import { DashboardHome } from "@/features/dashboard/components/home/DashboardHome";
 
 export default function DashboardPage() {
-  return <DashboardContainer />;
+  return <DashboardHome />;
 }

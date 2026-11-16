@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { useForgotPassword } from "@/hooks/auth/useForgotPassword";
+import { useForgotPassword } from "@/features/auth/hooks/useForgotPassword";
 import { Mail, Loader2, ArrowRight, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { PublicHeader } from "@/components/PublicHeader";

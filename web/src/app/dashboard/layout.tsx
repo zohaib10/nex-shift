@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { PageLoader } from "@/components/PageLoader";
 import { OrgProvider } from "@/context/OrgContext";
 import { hasSession } from "@/lib/session";
-import { AppSidebar } from "@/features/Dashboard/components/AppSidebar";
+import { AppSidebar } from "@/features/dashboard/components/sidebar/AppSidebar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
