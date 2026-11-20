@@ -29,6 +29,8 @@ export interface OnboardingWizardProps {
   isSubmitting: boolean;
   submitError: string | null;
   orgNameCreated: string;
+  /** Emails whose invite couldn't be sent; shown on the success screen. */
+  failedInvites: string[];
   user: { firstName: string; lastName: string } | null;
   isAddMode: boolean;
   onFieldChange: (field: keyof OnboardingFormValues, value: string) => void;
@@ -84,6 +86,7 @@ export function OnboardingWizard({
   isSubmitting,
   submitError,
   orgNameCreated,
+  failedInvites,
   user,
   isAddMode,
   onFieldChange,
@@ -201,6 +204,11 @@ export function OnboardingWizard({
               <p className="text-[0.85rem] text-tx2 mb-[28px] max-w-[300px] leading-[1.6]">
                 Your organization is live. Head to your dashboard to start scheduling your team.
               </p>
+              {failedInvites.length > 0 && (
+                <p className="text-[0.78rem] text-red-500 -mt-[16px] mb-[24px] max-w-[320px] leading-[1.5]">
+                  We couldn&apos;t invite {failedInvites.join(", ")}. Try again from Team Invites on the dashboard.
+                </p>
+              )}
               <button
                 type="button"
                 onClick={onGoToDashboard}

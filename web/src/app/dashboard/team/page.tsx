@@ -1,24 +1,28 @@
 "use client";
 
+import { Suspense } from "react";
 import { PageLoader } from "@/components/PageLoader";
+import { FullPageSpinner } from "@/components/FullPageSpinner";
 import { useOrg } from "@/context/OrgContext";
-import { isOrgAdmin } from "@/lib/roles";
+import { dashboardKind } from "@/lib/roles";
 import { Topbar } from "@/features/dashboard/components/Topbar";
 import { NoAccess } from "@/features/dashboard/components/NoAccess";
-import { TeamList } from "@/features/team/components/TeamList";
+import { TeamView } from "@/features/team/components/TeamView";
 
 export default function TeamPage() {
-  const { activeOrg, isLoading } = useOrg();
+  const { activeOrg, activeLocId, isLoading } = useOrg();
   if (isLoading) return <PageLoader />;
 
   return (
     <>
       <Topbar title="Team" subtitle={activeOrg?.name} />
       <div className="flex-1 overflow-y-auto p-[22px]">
-        {activeOrg && isOrgAdmin(activeOrg.role) ? (
-          <TeamList org={activeOrg} />
+        {activeOrg && dashboardKind(activeOrg) !== "staff" ? (
+          <Suspense fallback={<FullPageSpinner />}>
+            <TeamView org={activeOrg} locationId={activeLocId} />
+          </Suspense>
         ) : (
-          <NoAccess title="Only admins can manage the team" hint="Ask an admin if your access needs to change." />
+          <NoAccess title="Only admins and managers can see the team" hint="Ask an admin if your access needs to change." />
         )}
       </div>
     </>

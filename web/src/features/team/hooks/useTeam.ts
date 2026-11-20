@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import api from "@/lib/api";
 import type { LocationRole, OrgRole } from "@/lib/roles";
+import type { Position } from "@/features/positions/hooks/usePositions";
 
 export interface TeamMember {
   userId: string;
@@ -11,12 +12,15 @@ export interface TeamMember {
   role: OrgRole;
   joinedAt: string;
   locations: { id: string; name: string; role: LocationRole }[];
+  positions: Position[];
 }
 
 export interface UpdateMemberPayload {
   role?: "admin" | "member";
   /** Replaces the member's full set of locations. */
   locations?: { locationId: string; role: LocationRole }[];
+  /** Replaces the positions they can be scheduled as. */
+  positionIds?: string[];
 }
 
 type ApiError = AxiosError<{ message: string | string[] }>;
@@ -34,7 +38,10 @@ export function useUpdateMember(orgId: string | null) {
   return useMutation<TeamMember, ApiError, { userId: string } & UpdateMemberPayload>({
     mutationFn: async ({ userId, ...body }) =>
       (await api.patch(`/organizations/${orgId}/members/${userId}`, body)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["team", orgId] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["team", orgId] });
+      void qc.invalidateQueries({ queryKey: ["roster", orgId] });
+    },
   });
 }
 

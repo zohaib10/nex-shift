@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsOptional,
-  IsEmail,
-  IsArray,
-} from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateOrgDto {
   @IsString()
@@ -46,11 +40,6 @@ export class CreateOrgDto {
   @IsString()
   @IsOptional()
   timezone?: string;
-
-  @IsArray()
-  @IsEmail({}, { each: true })
-  @IsOptional()
-  inviteEmails?: string[];
 
   @IsString()
   @IsOptional()

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { seedPositions } from '../positions/default-positions';
 import { PrismaService } from '../prisma/prisma.service';
-import { SupabaseService } from '../supabase/supabase.service';
 import { CreateOrgDto } from './dto/create-org.dto';
 import { OrgAccessService } from './org-access.service';
 import {
@@ -15,10 +15,14 @@ import {
 export class OrganizationsService {
   constructor(
     private prisma: PrismaService,
-    private supabase: SupabaseService,
     private access: OrgAccessService,
   ) {}
 
+  /**
+   * Creates the org, its first location, the owner's membership and default
+   * positions. Returns the org with that location; onboarding then sends its
+   * invites through POST /organizations/:orgId/invite like any other invite.
+   */
   async createOrg(userId: string, dto: CreateOrgDto) {
     await this.access.assertCanCreateOrg(userId);
     const org = await this.prisma.$transaction(async (tx) => {
@@ -54,7 +58,7 @@ export class OrganizationsService {
         },
       });
 
-      await tx.location.create({
+      const location = await tx.location.create({
         data: {
           orgId: organization.id,
           name: dto.locationName,
@@ -73,6 +77,13 @@ export class OrganizationsService {
         },
       });
 
+      await tx.position.createMany({
+        data: seedPositions(dto.type).map((p) => ({
+          ...p,
+          orgId: organization.id,
+        })),
+      });
+
       if (dto.promoId) {
         await tx.promoCode.update({
           where: { id: dto.promoId },
@@ -80,18 +91,11 @@ export class OrganizationsService {
         });
       }
 
-      return organization;
+      return {
+        ...organization,
+        locations: [{ id: location.id, name: location.name }],
+      };
     });
-
-    if (dto.inviteEmails && dto.inviteEmails.length > 0) {
-      await Promise.allSettled(
-        dto.inviteEmails.map((email) =>
-          this.supabase.getClient().auth.admin.inviteUserByEmail(email, {
-            data: { org_id: org.id, role: 'user' },
-          }),
-        ),
-      );
-    }
 
     return org;
   }
@@ -141,7 +145,7 @@ export class OrganizationsService {
               id: true,
               name: true,
               locations: {
-                select: { id: true, name: true },
+                select: { id: true, name: true, timezone: true },
                 orderBy: { createdAt: 'asc' },
               },
             },

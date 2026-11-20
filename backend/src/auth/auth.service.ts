@@ -14,6 +14,7 @@ import { EmailService } from '../email/email.service';
 import { verificationCodeEmail } from '../email/templates/verification-code.email';
 import { passwordResetEmail } from '../email/templates/password-reset.email';
 import { SignupDto } from './dto/signup.dto';
+import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 
 const CODE_TTL_MS = 15 * 60 * 1000;
 const CODE_MAX_ATTEMPTS = 5;
@@ -82,7 +83,20 @@ export class AuthService {
       emailVerified: user.emailVerified,
       phoneVerified: user.phoneVerified,
       createdAt: user.createdAt,
+      hiddenDashboardCards: user.hiddenDashboardCards,
     };
+  }
+
+  async updatePreferences(user: User, dto: UpdatePreferencesDto) {
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        ...(dto.hiddenDashboardCards
+          ? { hiddenDashboardCards: [...new Set(dto.hiddenDashboardCards)] }
+          : {}),
+      },
+    });
+    return this.toProfile(updated);
   }
 
   // ─── email verification ─────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import { Pencil } from "lucide-react";
 import type { TeamMember } from "@/features/team/hooks/useTeam";
 import { LOCATION_ROLE_LABEL, isOrgAdmin } from "@/lib/roles";
+import { PositionChip } from "@/features/positions/components/PositionChip";
 import { RolePill } from "./RolePill";
 
 export function TeamMemberRow({ member: m, onEdit }: { member: TeamMember; onEdit: () => void }) {
@@ -21,6 +22,7 @@ export function TeamMemberRow({ member: m, onEdit }: { member: TeamMember; onEdi
         <div className="flex items-center gap-[8px] flex-wrap">
           <span className="text-[0.84rem] font-[600] text-tx truncate">{name}</span>
           <RolePill member={m} />
+          {m.positions.map((p) => <PositionChip key={p.id} position={p} />)}
         </div>
         <div className="text-[0.72rem] text-tx3 truncate">{m.email} · {where}</div>
       </div>

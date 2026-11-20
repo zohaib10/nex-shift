@@ -20,7 +20,7 @@ export class MembersService {
   ) {}
 
   async listMembers(orgId: string) {
-    const [members, locationRows] = await Promise.all([
+    const [members, locationRows, positionRows] = await Promise.all([
       this.prisma.orgMember.findMany({
         where: { orgId },
         orderBy: { createdAt: 'asc' },
@@ -33,6 +33,14 @@ export class MembersService {
           location: { select: { id: true, name: true } },
         },
         orderBy: { location: { createdAt: 'asc' } },
+      }),
+      this.prisma.memberPosition.findMany({
+        where: { position: { orgId } },
+        select: {
+          userId: true,
+          position: { select: { id: true, name: true, color: true } },
+        },
+        orderBy: { position: { name: 'asc' } },
       }),
     ]);
     // org_members.user_id has no FK relation yet, so users are fetched separately.
@@ -54,6 +62,9 @@ export class MembersService {
         locations: locationRows
           .filter((r) => r.userId === m.userId)
           .map((r) => ({ ...r.location, role: normalizeLocationRole(r.role) })),
+        positions: positionRows
+          .filter((r) => r.userId === m.userId)
+          .map((r) => r.position),
       };
     });
   }
@@ -75,11 +86,18 @@ export class MembersService {
     if (!target) throw new NotFoundException('Member not found');
     const targetRole = normalizeOrgRole(target.role);
 
-    if (targetRole === 'owner') {
+    // Positions are not access: any admin can set them, for anyone.
+    const changingAccess =
+      dto.role !== undefined || dto.locations !== undefined;
+    if (changingAccess && targetRole === 'owner') {
       throw new ForbiddenException("The owner's access can't be changed");
     }
     const changingRole = dto.role !== undefined && dto.role !== targetRole;
-    if ((changingRole || targetRole === 'admin') && actorRole !== 'owner') {
+    if (
+      changingAccess &&
+      (changingRole || targetRole === 'admin') &&
+      actorRole !== 'owner'
+    ) {
       throw new ForbiddenException('Only the owner can change admin access');
     }
 
@@ -92,7 +110,27 @@ export class MembersService {
         throw new NotFoundException('One or more locations not found');
     }
 
+    const positionIds = dto.positionIds && [...new Set(dto.positionIds)];
+    if (positionIds) {
+      const found = await this.prisma.position.count({
+        where: { orgId, id: { in: positionIds } },
+      });
+      if (found !== positionIds.length)
+        throw new NotFoundException('One or more positions not found');
+    }
+
     await this.prisma.$transaction(async (tx) => {
+      if (positionIds) {
+        await tx.memberPosition.deleteMany({
+          where: { userId: targetId, position: { orgId } },
+        });
+        await tx.memberPosition.createMany({
+          data: positionIds.map((positionId) => ({
+            positionId,
+            userId: targetId,
+          })),
+        });
+      }
       if (changingRole) {
         await tx.orgMember.update({
           where: { id: target.id },

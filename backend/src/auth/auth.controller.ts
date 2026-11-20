@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   HttpCode,
   HttpStatus,
@@ -13,6 +14,7 @@ import { SignupDto } from './dto/signup.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto, ResendVerificationDto } from './dto/verify-email.dto';
+import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import {
   AllowUnsynced,
   AllowUnverified,
@@ -75,5 +77,13 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: User) {
     return this.authService.toProfile(user);
+  }
+
+  @Patch('me/preferences')
+  updatePreferences(
+    @CurrentUser() user: User,
+    @Body() dto: UpdatePreferencesDto,
+  ) {
+    return this.authService.updatePreferences(user, dto);
   }
 }

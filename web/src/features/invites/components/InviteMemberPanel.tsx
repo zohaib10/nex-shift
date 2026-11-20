@@ -21,7 +21,6 @@ export function InviteMemberPanel({
   locations,
   defaultLocationId,
   defaultLocationName,
-  invitedById,
   canInviteAnyRole,
   allLocationIds,
 }: {
@@ -32,7 +31,6 @@ export function InviteMemberPanel({
   locations: { id: string; name: string }[];
   defaultLocationId: string | null;
   defaultLocationName: string;
-  invitedById: string | null;
   /** Admins and owners can invite managers and admins; managers only staff. */
   canInviteAnyRole: boolean;
   /** Every location in the org; an admin invite covers all of them. */
@@ -87,7 +85,7 @@ export function InviteMemberPanel({
       setLocationError("");
     }
 
-    if (!valid || !orgId || !invitedById) return;
+    if (!valid || !orgId) return;
 
     inviteMember(
       { email: trimmed, role, locationIds: isAdminInvite ? allLocationIds : selectedLocationIds },

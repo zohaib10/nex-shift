@@ -8,6 +8,8 @@ import { apiErrorMessage, useRemoveMember, useUpdateMember, type TeamMember } fr
 import type { LocationRole } from "@/lib/roles";
 import { OrgAccessPicker } from "./OrgAccessPicker";
 import { LocationAccessPicker } from "./LocationAccessPicker";
+import { usePositions } from "@/features/positions/hooks/usePositions";
+import { PositionPicker } from "@/features/positions/components/PositionPicker";
 
 const noteClass = "text-[0.78rem] text-tx2 bg-surf2 border border-brd rounded-[8px] p-[10px_12px]";
 
@@ -26,7 +28,9 @@ export function EditMemberPanel({
 }) {
   const [orgRole, setOrgRole] = React.useState<"admin" | "member">("member");
   const [assignments, setAssignments] = React.useState<Record<string, LocationRole>>({});
+  const [positionIds, setPositionIds] = React.useState<string[]>([]);
   const [confirmRemove, setConfirmRemove] = React.useState(false);
+  const { data: positions = [] } = usePositions(orgId);
   const update = useUpdateMember(orgId);
   const remove = useRemoveMember(orgId);
 
@@ -35,6 +39,7 @@ export function EditMemberPanel({
     if (!member) return;
     setOrgRole(member.role === "admin" ? "admin" : "member");
     setAssignments(Object.fromEntries(member.locations.map((l) => [l.id, l.role])));
+    setPositionIds(member.positions.map((p) => p.id));
     setConfirmRemove(false);
     update.reset();
     remove.reset();
@@ -56,13 +61,19 @@ export function EditMemberPanel({
     });
   }
 
+  function togglePosition(id: string) {
+    setPositionIds((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+  }
+
+  // Any admin can set anyone's positions; access follows the owner/admin rules above.
   function save() {
     if (!member) return;
     update.mutate(
       {
         userId: member.userId,
+        positionIds,
         ...(canChangeOrgRole ? { role: orgRole } : {}),
-        ...(showLocations
+        ...(canEditAccess && showLocations
           ? { locations: Object.entries(assignments).map(([locationId, role]) => ({ locationId, role })) }
           : {}),
       },
@@ -79,12 +90,14 @@ export function EditMemberPanel({
   const name = member ? `${member.firstName} ${member.lastName}`.trim() || member.email : "";
 
   return (
-    <SlidePanel open={!!member} onClose={onClose} title="Edit access">
+    <SlidePanel open={!!member} onClose={onClose} title="Edit member">
       <div className="flex-1 overflow-y-auto p-[18px] space-y-[18px]">
         <div>
           <div className="text-[0.92rem] font-[600] text-tx">{name}</div>
           <div className="text-[0.75rem] text-tx2">{member?.email}</div>
         </div>
+
+        <PositionPicker positions={positions} selected={positionIds} onToggle={togglePosition} />
 
         {isOwner && <p className={noteClass}>This is the organization&apos;s owner. Their access can&apos;t be changed.</p>}
         {!isOwner && !canEditAccess && <p className={noteClass}>Only the owner can change an admin&apos;s access.</p>}
@@ -102,12 +115,6 @@ export function EditMemberPanel({
               />
             )}
 
-            {(update.error || remove.error) && (
-              <p className="text-[0.78rem] text-red-500">
-                {apiErrorMessage(update.error ?? remove.error, "Something went wrong. Please try again.")}
-              </p>
-            )}
-
             <button
               type="button"
               onClick={handleRemove}
@@ -122,9 +129,15 @@ export function EditMemberPanel({
             </button>
           </>
         )}
+
+        {(update.error || remove.error) && (
+          <p className="text-[0.78rem] text-red-500">
+            {apiErrorMessage(update.error ?? remove.error, "Something went wrong. Please try again.")}
+          </p>
+        )}
       </div>
 
-      {canEditAccess && (
+      {member && (
         <div className="p-[14px_18px] border-t border-brd shrink-0">
           <button
             onClick={save}

@@ -42,6 +42,7 @@ export function OnboardingFlow() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [orgNameCreated, setOrgNameCreated] = useState("");
+  const [failedInvites, setFailedInvites] = useState<string[]>([]);
   const [user, setUser] = useState<{ id: string; firstName: string; lastName: string } | null>(null);
   const [isChecking, setIsChecking] = useState(true);
 
@@ -183,6 +184,7 @@ export function OnboardingFlow() {
       {
         onSuccess: (data) => {
           setOrgNameCreated(data.name);
+          setFailedInvites(data.failedInvites);
           if (isAddMode) {
             // Signal OrgContext to activate this org when the dashboard loads
             sessionStorage.setItem("rosta_pending_org", data.id);
@@ -215,6 +217,7 @@ export function OnboardingFlow() {
       isSubmitting={isSubmitting}
       submitError={submitError}
       orgNameCreated={orgNameCreated}
+      failedInvites={failedInvites}
       user={user}
       isAddMode={isAddMode}
       onFieldChange={handleFieldChange}

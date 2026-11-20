@@ -9,6 +9,8 @@ export interface OrgLocation {
   name: string;
   /** The user's role here. Admins and owners are managers everywhere. */
   role: LocationRole;
+  /** IANA timezone; shifts here are shown in it. Missing on older locations. */
+  timezone?: string | null;
 }
 
 export interface UserOrg {

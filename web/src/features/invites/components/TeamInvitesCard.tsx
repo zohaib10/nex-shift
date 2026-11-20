@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Plus, Users } from "lucide-react";
+import { ArrowRight, EyeOff, Plus, Users } from "lucide-react";
 import { useLocationRequests } from "@/features/invites/hooks/useLocationRequests";
 import { InviteRow } from "./InviteRow";
 import { InviteMemberPanel } from "./InviteMemberPanel";
 
-/** The dashboard shows recent activity; Analytics has the full history. */
+/** The dashboard shows recent activity; Team → Invitations has the full history. */
 const RECENT_INVITE_DAYS = 7;
 
 export function TeamInvitesCard({
@@ -15,17 +15,18 @@ export function TeamInvitesCard({
   locationId,
   locationName,
   locations,
-  invitedById,
   canInviteAnyRole,
   allLocationIds,
+  onHide,
 }: {
   orgId: string | null;
   locationId: string | null;
   locationName: string;
   locations: { id: string; name: string }[];
-  invitedById: string | null;
   canInviteAnyRole: boolean;
   allLocationIds: string[];
+  /** Hides the card from this user's dashboard. */
+  onHide?: () => void;
 }) {
   const router = useRouter();
   const { data: requests, isLoading } = useLocationRequests(orgId, locationId, RECENT_INVITE_DAYS);
@@ -40,7 +41,7 @@ export function TeamInvitesCard({
             {locationName} · Last {RECENT_INVITE_DAYS} days ·{" "}
             <button
               type="button"
-              onClick={() => router.push("/dashboard/analytics")}
+              onClick={() => router.push("/dashboard/team?tab=invitations")}
               className="text-acc font-[500] bg-transparent border-none p-0 cursor-pointer hover:opacity-75"
             >
               View history
@@ -52,6 +53,17 @@ export function TeamInvitesCard({
             <span className="text-[0.68rem] font-[600] px-[7px] py-[2px] rounded-full bg-[rgba(255,176,0,0.12)] text-[#FFB000]">
               {requests.filter((r) => r.status === "pending").length} pending
             </span>
+          )}
+          {onHide && (
+            <button
+              type="button"
+              onClick={onHide}
+              aria-label="Hide Team Invites"
+              title="Hide from dashboard"
+              className="w-[24px] h-[24px] rounded-[6px] border border-brd2 bg-transparent flex items-center justify-center text-tx3 hover:bg-surf2 hover:text-tx2 transition-colors cursor-pointer"
+            >
+              <EyeOff className="w-[12px] h-[12px]" strokeWidth={2} />
+            </button>
           )}
           <button
             onClick={() => setInviteOpen(true)}
@@ -104,7 +116,6 @@ export function TeamInvitesCard({
         locations={locations}
         defaultLocationId={locationId}
         defaultLocationName={locationName}
-        invitedById={invitedById}
         canInviteAnyRole={canInviteAnyRole}
         allLocationIds={allLocationIds}
       />

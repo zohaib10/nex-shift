@@ -28,4 +28,10 @@ export class UpdateMemberDto {
   @ValidateNested({ each: true })
   @Type(() => LocationAssignmentDto)
   locations?: LocationAssignmentDto[];
+
+  /** Replaces the positions they can be scheduled as. */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  positionIds?: string[];
 }

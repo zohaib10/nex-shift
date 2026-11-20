@@ -16,6 +16,8 @@ model User {
   phoneNumber    String
   emailVerified  Boolean   @default(false)
   phoneVerified  Boolean   @default(false)
+  // Dashboard cards the user has hidden (see src/auth/preferences.ts)
+  hiddenDashboardCards String[] @default([])
   deletedAt      DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -23,6 +25,9 @@ model User {
   resetTokens    PasswordResetToken[]
   verificationCodes EmailVerificationCode[]
   acceptedInvites   MemberRequest[] @relation("AcceptedInvites")
+  positions         MemberPosition[]
+  shifts            Shift[]         @relation("AssignedShifts")
+  createdShifts     Shift[]         @relation("CreatedShifts")
 
   @@map("users")
 }
@@ -72,6 +77,8 @@ model Organization {
   locations      Location[]
   members        OrgMember[]
   memberRequests MemberRequest[]
+  positions      Position[]
+  shifts         Shift[]
 
   @@map("organizations")
 }
@@ -89,6 +96,7 @@ model Location {
 
   members   LocationMember[]
   requests  MemberRequest[]
+  shifts    Shift[]
 
   @@map("locations")
 }
@@ -156,4 +164,67 @@ model PromoCode {
   createdAt  DateTime  @default(now()) @map("created_at")
 
   @@map("promo_codes")
+}
+
+// A job a person can be scheduled as, e.g. "RN", "CNA", "Front desk".
+// Defined per organization by its admins.
+model Position {
+  id        String       @id @default(uuid())
+  orgId     String       @map("org_id")
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  color     String       // hex, e.g. "#3B82F6"
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  members MemberPosition[]
+  shifts  Shift[]
+
+  @@unique([orgId, name])
+  @@map("positions")
+}
+
+// Positions a member is qualified to work.
+model MemberPosition {
+  id         String   @id @default(uuid())
+  positionId String   @map("position_id")
+  position   Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([positionId, userId])
+  @@index([userId])
+  @@map("member_positions")
+}
+
+// One shift at one location. Times are UTC instants; the web app shows them
+// in the location's timezone. userId null = an open shift nobody has yet.
+// status: draft (managers only) | published (visible to the assignee)
+//       | cancelled (was published; kept so staff see it was called off)
+// Upcoming / in progress / completed aren't stored: they follow from the times.
+model Shift {
+  id          String    @id @default(uuid())
+  orgId       String    @map("org_id")
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  locationId  String    @map("location_id")
+  location    Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  userId      String?   @map("user_id")
+  user        User?     @relation("AssignedShifts", fields: [userId], references: [id], onDelete: SetNull)
+  positionId  String?   @map("position_id")
+  position    Position? @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  startsAt    DateTime  @map("starts_at")
+  endsAt      DateTime  @map("ends_at")
+  notes       String?
+  status      String    @default("draft")
+  cancelledAt DateTime? @map("cancelled_at")
+  // Set by a manager when the assignee didn't turn up.
+  noShowAt    DateTime? @map("no_show_at")
+  createdById String    @map("created_by_id")
+  createdBy   User      @relation("CreatedShifts", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([locationId, startsAt])
+  @@index([userId, startsAt])
+  @@map("shifts")
 }
